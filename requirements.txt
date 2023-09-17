@@ -1,0 +1,5 @@
+aiogram
+lightdb
+python-dotenv
+octodiary
+gitpython

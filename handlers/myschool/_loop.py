@@ -25,7 +25,6 @@ async def on_startup_myschool_router(
         if user_id.isdigit() and db.get_key(user_id, "system", None) == "myschool"
     }:
         api = AsyncMobileAPI(token=user.token)
-        # try:
         profile_id = (await api.get_users_profile_info())[0].id
         profile = await api.get_profile(profile_id)
         today = date.today()
@@ -56,8 +55,6 @@ async def on_startup_myschool_router(
             x.model_dump(exclude_none=True, exclude_unset=True)
             for x in notifications
         ]
-        # except APIError:
-        #     ...
 
 
 def generate_text_notification(notif: Notification):
@@ -124,7 +121,6 @@ async def send_notications(
                 and id not in user.db_notified_ids
                 and (text := generate_text_notification(notification))
             ):
-                print(6)
                 await bot.send_message(int(user_id), text)
                 user.db_notified_ids = user.db_notified_ids + [id]
         

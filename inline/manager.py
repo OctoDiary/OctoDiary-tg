@@ -473,7 +473,8 @@ class BotInlineManager():
                 if isinstance(strings, list)
                 else list(strings.keys())[0],
                 row_width
-            )
+            ),
+            **kwargs
         )
     
 
@@ -500,7 +501,7 @@ class BotInlineManager():
             types.InlineKeyboardMarkup,
             types.ReplyKeyboardRemove,
             types.ReplyKeyboardMarkup,
-        ]]
+        ]], **kwargs
     ):
         if isinstance(reply_markup, (list, dict)):
             new_reply_markup = self.generate_markup(reply_markup)
@@ -512,33 +513,33 @@ class BotInlineManager():
             if isinstance(response, str):
                 return await (update.edit_text if edit else update.answer)(
                     text=response,
-                    reply_markup=new_reply_markup
+                    reply_markup=new_reply_markup, **kwargs
                 )
             else:
-                return await self.list(update, response)
+                return await self.list(update, response, **kwargs)
         elif isinstance(update, types.CallbackQuery):
             if update.inline_message_id:
                 return await self.bot.edit_message_text(
                     text=response,
                     inline_message_id=update.inline_message_id,
-                    reply_markup=new_reply_markup
+                    reply_markup=new_reply_markup, **kwargs
                 )
             else:
                 return await update.message.edit_text(
                     text=response,
-                    reply_markup=new_reply_markup
+                    reply_markup=new_reply_markup, **kwargs
                 )
         elif isinstance(update, (types.Chat, types.User)):
             return await self.bot.send_message(
                 text=response,
                 chat_id=update.id,
-                reply_markup=new_reply_markup
+                reply_markup=new_reply_markup, **kwargs
             )
         elif isinstance(update, types.ChosenInlineResult) and update.inline_message_id:
             return await self.bot.edit_message_text(
                 text=response,
                 inline_message_id=update.inline_message_id,
-                reply_markup=new_reply_markup
+                reply_markup=new_reply_markup, **kwargs
             )
         
         return False

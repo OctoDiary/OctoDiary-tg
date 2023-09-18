@@ -1,6 +1,5 @@
+from . import _loop, homeworks, marks, profile, schedule, settings
 from .router import router as MySchoolRouter
-from . import _loop, schedule, settings, homeworks, marks, profile
-
 
 __all__ = [
     "MySchoolRouter",

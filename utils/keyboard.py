@@ -65,3 +65,14 @@ ABOUT = InlineKeyboardMarkup(inline_keyboard=[
         InlineKeyboardButton(text="Den4ikSuperOstryyPer4ik", url="https://github.com/Den4ikSuperOstryyPer4ik"),
     ]
 ])
+
+
+HOMEWORKS_TYPE = ReplyKeyboardMarkup(
+    keyboard=[
+        [
+            KeyboardButton(text="Ближайшие"),
+            KeyboardButton(text="Прошедшие"),
+        ]
+    ],
+    resize_keyboard=True
+)

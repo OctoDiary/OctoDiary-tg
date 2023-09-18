@@ -137,6 +137,12 @@ async def set_login_type(message: Message, state: FSMContext):
 
 
 async def check_token_send_confirm(message: Message, token: str, state: FSMContext):
+    if not token:
+        await state.clear()
+        await message.answer(
+            "⚠️ Кажется, такого аккаунта несуществует / были введены неверные данные / доступ запрещен.\nПожалуйста, зайдите с существующего аккаунта."
+        )
+    
     api = AsyncMobileAPI(token=token)
     try:
         user_api = await api.get_users_profile_info()
@@ -162,19 +168,17 @@ async def check_token_send_confirm(message: Message, token: str, state: FSMConte
             profile=profile
         )
 
-        # user.db_users_profile_info = [prof.model_dump() for prof in user_api]
-
         await state.set_state(Form.confirm)
         await message.answer(
             (
-                f"<b>{profile.last_name} {profile.first_name} {profile.middle_name}, {type}</b>, верно?"
+                f"❔ <b>{profile.last_name} {profile.first_name} {profile.middle_name}, {type}</b>, верно?"
             ),
             reply_markup=YES_OR_NO
         )
     except APIError as e:
         await state.clear()
         await message.answer(
-            f"🚫 Произошла ошибка: {e}\nПопробуйте еще раз позднее."
+            f"🚫 <b>Произошла ошибка</b>: <code>{e}</code>\nПопробуйте <code>еще раз позднее</code>."
         )
 
 
@@ -276,7 +280,7 @@ async def set_confirm(message: Message, state: FSMContext):
 async def set_gosuslugi_mfa(message: Message, state: FSMContext):
     if not message.text.isdigit():
         await message.answer(
-            "🚫 Неверный код.\nВведите пожалуйста MFA (SMS/TOTP код):"
+            "🚫 <b>Неверный</b> код.\nВведите пожалуйста MFA (SMS/TOTP код):"
         )
         return
     
@@ -285,6 +289,6 @@ async def set_gosuslugi_mfa(message: Message, state: FSMContext):
         api: AsyncMobileAPI = data["api"]
         token = await api.esia_enter_MFA(code=int(message.text))
     except APIError as e:
-        await message.answer(f"🚫 Произошла ошибка: {e}")
+        await message.answer(f"🚫 Произошла <b>ошибка</b>: <code>{e}</code>")
     else:
         await check_token_send_confirm(message, token, state)

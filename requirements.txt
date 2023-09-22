@@ -3,3 +3,5 @@ lightdb
 python-dotenv
 octodiary
 gitpython
+pyjwt
+pyjwt[crypto]

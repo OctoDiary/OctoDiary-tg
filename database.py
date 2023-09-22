@@ -1,3 +1,8 @@
+#               © Copyright 2023
+#          Licensed under the MIT License
+#        https://opensource.org/licenses/MIT
+#           https://github.com/OctoDiary
+
 from typing import Any
 
 from lightdb import LightDB
@@ -38,6 +43,8 @@ class User:
     def __getattribute__(self, __name: str) -> Any:
         if __name.startswith("db_"):
             return self.get(__name[3:])
+        elif __name == "id":
+            return self.__id
         return super().__getattribute__(__name)
     
     def __setattr__(self, __name: str, __value: Any) -> None:
@@ -53,20 +60,52 @@ class Database(LightDB):
     """
     __instance__ = None
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls):
         if cls.__instance__ is None:
             cls.__instance__ = super().__new__(cls)
         return cls.__instance__
 
 
     def __init__(self):
-        super().__init__("database.json")
+        super().__init__(location="users_db.json")
+        self.__settings = LightDB("settings.json")
 
 
     def __getattribute__(self, __name: str) -> Any:
-        if __name.startswith("user_"):
-            return User(self, self.get(__name[5:]))
-        return super().__getattribute__(__name)
+        return (
+            self.get(__name[3:])
+            if __name.startswith("db_")
+            else self.__settings.get(__name[9:])
+            if __name.startswith("settings_")
+            else super().__getattribute__(__name)
+        )
+    
+    def __setattr__(self, __name: str, __value: Any) -> None:
+        return (
+            self.set(__name[3:], __value)
+            if __name.startswith("db_")
+            else self.__settings.set(__name[9:], __value)
+            if __name.startswith("settings_")
+            else super().__setattr__(__name, __value)
+        )
+
 
     def user(self, id: str) -> User:
-        return User(self, id)
+        return User(self, str(id))
+    
+    @property
+    def closed(self) -> bool:
+        return self.__settings.get("closed", False)
+    
+    @closed.setter
+    def closed(self, value: bool) -> None:
+        self.__settings.set("closed", value)
+
+    @property
+    def admins(self) -> list[str]:
+        return self.__settings.get("admins", [5184725450, 692755648])
+    
+    @admins.setter
+    def admins(self, value: list[str]) -> None:
+        self.__settings.set("admins", value)
+    

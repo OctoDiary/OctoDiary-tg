@@ -1,3 +1,8 @@
+#               © Copyright 2023
+#          Licensed under the MIT License
+#        https://opensource.org/licenses/MIT
+#           https://github.com/OctoDiary
+
 import asyncio
 import logging
 import os
@@ -15,7 +20,7 @@ load_dotenv()
 
 async def main():
     bot = Bot(token=os.getenv("TOKEN"), parse_mode=ParseMode.HTML)
-    dp = Dispatcher()
+    dp = Dispatcher(name="OctoDiary")
     BotInlineManager(bot, dp, routers)
     
     await bot.delete_webhook(drop_pending_updates=True)

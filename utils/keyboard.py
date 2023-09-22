@@ -1,20 +1,33 @@
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton
+#               © Copyright 2023
+#          Licensed under the MIT License
+#        https://opensource.org/licenses/MIT
+#           https://github.com/OctoDiary
 
+from aiogram.types import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardMarkup,
+)
 
 DEFAULT = ReplyKeyboardMarkup(keyboard=[
     [
         KeyboardButton(text="Расписание"),
-        KeyboardButton(text="Оценки"),
+        KeyboardButton(text="Профиль")
     ],
     [
-        KeyboardButton(text="Домашние задания"),
-        KeyboardButton(text="Профиль")
+        KeyboardButton(text="Д/З [Ближайшее]"),
+        KeyboardButton(text="Д/З [Прошедшее]")
+    ],
+    [
+        KeyboardButton(text="Оценки [По дате]"),
+        KeyboardButton(text="Оценки [По предмету]")
     ],
     [
         KeyboardButton(text="Настройки"),
         KeyboardButton(text="О проекте")
     ]
-], resize_keyboard=True)
+], resize_keyboard=True, selective=True)
 
 
 AUTH_SYSTEMS = ReplyKeyboardMarkup(keyboard=[
@@ -24,7 +37,7 @@ AUTH_SYSTEMS = ReplyKeyboardMarkup(keyboard=[
     [
         KeyboardButton(text="МЭШ")
     ]
-], resize_keyboard=True)
+], resize_keyboard=True, selective=True)
 
 
 AUTH_LOGIN_TYPE = ReplyKeyboardMarkup(keyboard=[
@@ -37,7 +50,7 @@ AUTH_LOGIN_TYPE = ReplyKeyboardMarkup(keyboard=[
     [
         KeyboardButton(text="AUPD-TOKEN")
     ]
-], resize_keyboard=True)
+], resize_keyboard=True, selective=True)
 
 
 YES_OR_NO = ReplyKeyboardMarkup(keyboard=[
@@ -45,7 +58,7 @@ YES_OR_NO = ReplyKeyboardMarkup(keyboard=[
         KeyboardButton(text="Да"),
         KeyboardButton(text="Нет")
     ]
-], resize_keyboard=True)
+], resize_keyboard=True, selective=True)
 
 
 ABOUT = InlineKeyboardMarkup(inline_keyboard=[
@@ -65,14 +78,3 @@ ABOUT = InlineKeyboardMarkup(inline_keyboard=[
         InlineKeyboardButton(text="Den4ikSuperOstryyPer4ik", url="https://github.com/Den4ikSuperOstryyPer4ik"),
     ]
 ])
-
-
-HOMEWORKS_TYPE = ReplyKeyboardMarkup(
-    keyboard=[
-        [
-            KeyboardButton(text="Ближайшие"),
-            KeyboardButton(text="Прошедшие"),
-        ]
-    ],
-    resize_keyboard=True
-)

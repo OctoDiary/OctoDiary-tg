@@ -1,10 +1,16 @@
-from .router import router, MySchool, APIs, MySchoolUser
-from aiogram.types import Message, CallbackQuery, InlineQuery, ChosenInlineResult
-from aiogram import F, Bot
-from aiogram.filters import Command
-from aiogram.enums import ChatType
-from database import User
+#               © Copyright 2023
+#          Licensed under the MIT License
+#        https://opensource.org/licenses/MIT
+#           https://github.com/OctoDiary
 
+from aiogram import F
+from aiogram.enums import ChatType
+from aiogram.filters import Command
+from aiogram.types import CallbackQuery, Message
+from database import User
+from utils.other import handler
+
+from .router import APIs, MySchool, MySchoolUser, router
 
 TEXT = """
 ⚙️ <b>Настройки</b>
@@ -61,6 +67,7 @@ def markup(user: User, apis: APIs, section: str = None):
     F.text == "Настройки",
     F.chat.type == ChatType.PRIVATE
 )
+@handler()
 async def settings(update: Message | CallbackQuery, apis: APIs, user: User):
     """Настройки"""
 
@@ -71,6 +78,7 @@ async def settings(update: Message | CallbackQuery, apis: APIs, user: User):
     )
 
 
+@handler()
 async def goals(update: CallbackQuery, apis: APIs, user: User):
     settings = user.db_settings
     settings["goals"] = not settings.get("goals", False)
@@ -82,6 +90,7 @@ async def goals(update: CallbackQuery, apis: APIs, user: User):
     )
 
 
+@handler()
 async def notifications(update: CallbackQuery, apis: APIs, user: User, attr: str = None):
     if attr:
         settings = user.db_settings

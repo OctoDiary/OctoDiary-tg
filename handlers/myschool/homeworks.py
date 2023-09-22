@@ -1,3 +1,8 @@
+#               © Copyright 2023
+#          Licensed under the MIT License
+#        https://opensource.org/licenses/MIT
+#           https://github.com/OctoDiary
+
 from datetime import date, timedelta
 
 from aiogram import F
@@ -5,17 +10,14 @@ from aiogram.enums import ChatType
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import CallbackQuery, ChosenInlineResult, InlineQuery, Message, ReplyKeyboardRemove
+from aiogram.types import Message
 from database import User
-from octodiary.exceptions import APIError
 from octodiary.types.myschool.mobile import ShortHomeworks
 from utils import keyboard
+from utils.other import handler, sort_dict_dy_date
 
 from .router import APIs, MySchool, MySchoolUser, router
 
-
-class HomeworksState(StatesGroup):
-    type = State()
 
 def homeworks_info(homeworks: ShortHomeworks):
     days = {}
@@ -45,48 +47,57 @@ def homeworks_info(homeworks: ShortHomeworks):
 @router.message(
     F.func(MySchoolUser).as_("user"),
     F.func(MySchool).as_("apis"),
-    Command("homeworks")
+    Command("homeworks_upcoming")
 )
 @router.message(
     F.func(MySchoolUser).as_("user"),
     F.func(MySchool).as_("apis"),
-    F.text == "Домашние задания",
+    F.text == "Д/З [Ближайшее]",
     F.chat.type == ChatType.PRIVATE
 )
-async def homeworks(message: Message, apis: APIs, user: User, state: FSMContext):
-    """Домашние задания (ДЗ)"""
+@handler()
+async def homeworks_upcoming(message: Message, apis: APIs, user: User):
+    """Домашние задания (ДЗ) : Ближайшее"""
 
-    await state.set_state(HomeworksState.type)
-    await message.answer(
-        "❔ Какие <b>ДЗ</b> вы хотите <b>просмотреть</b>?",
-        reply_markup=keyboard.HOMEWORKS_TYPE
+    homeworks = await apis.mobile.get_homeworks_short(
+        student_id=user.db_profile["children"][0]["id"],
+        profile_id=user.db_profile_id,
+        from_date=date.today(),
+        to_date=(date.today() + timedelta(days=7))
     )
-
-
-@router.message(
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
-    HomeworksState.type,
-)
-async def get_homeworks(message: Message, apis: APIs, user: User, state: FSMContext):
-    """Домашние задания (ДЗ)"""
-
-    await state.clear()
-    upcoming = message.text == "Ближайшие"
-
-    try:
-        homeworks = await apis.mobile.get_homeworks_short(
-            student_id=user.db_profile["children"][0]["id"],
-            profile_id=user.db_profile_id,
-            from_date=date(2023, 9, 1) if not upcoming else date.today(),
-            to_date=(date.today() + timedelta(days=7)) if upcoming else date.today() - timedelta(days=1)
-        )
-    except APIError as e:
-        return await message.answer(f"❕ [<code>{e.status_code}</code>] Сервер <b>не ответил</b> на запрос, <b>ошибка</b>...\nПопробуйте позднее.")
-    
     
     await message.bot.inline.list(
         update=message,
-        strings=homeworks_info(homeworks),
+        row_width=5,
+        **sort_dict_dy_date(homeworks_info(homeworks)),
     )
-    await (await message.answer("...", reply_markup=keyboard.DEFAULT)).delete()
+
+
+@router.message(
+    F.func(MySchoolUser).as_("user"),
+    F.func(MySchool).as_("apis"),
+    Command("homeworks_past")
+)
+@router.message(
+    F.func(MySchoolUser).as_("user"),
+    F.func(MySchool).as_("apis"),
+    F.text == "Д/З [Прошедшее]",
+    F.chat.type == ChatType.PRIVATE
+)
+@handler()
+async def homeworks_past(message: Message, apis: APIs, user: User):
+    """Домашние задания (ДЗ) : Прошедшее"""
+
+    homeworks = await apis.mobile.get_homeworks_short(
+        student_id=user.db_profile["children"][0]["id"],
+        profile_id=user.db_profile_id,
+        from_date=date.today() - timedelta(days=7),
+        to_date=date.today() - timedelta(days=1)
+    )
+    
+    await message.bot.inline.list(
+        update=message,
+        row_width=5,
+        **sort_dict_dy_date(homeworks_info(homeworks), reverse=True)
+    )
+

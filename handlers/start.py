@@ -1,17 +1,21 @@
+#               © Copyright 2023
+#          Licensed under the MIT License
+#        https://opensource.org/licenses/MIT
+#           https://github.com/OctoDiary
+
+
 from aiogram import F, Router
 from aiogram.enums import ChatType
 from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import (
-    Message,
-    ReplyKeyboardRemove,
-)
+from aiogram.types import Message, ReplyKeyboardRemove
 from database import Database
 from git import Repo
 from octodiary.asyncApi.myschool import AsyncMobileAPI
 from octodiary.exceptions import APIError
 from utils.keyboard import ABOUT, AUTH_LOGIN_TYPE, AUTH_SYSTEMS, DEFAULT, YES_OR_NO
+from .myschool._loop import on_startup_myschool_router
 
 router = Router(name="Start")
 
@@ -80,38 +84,56 @@ async def auth(message: Message, state: FSMContext):
     if Database().user(message.from_user.id).token:
         await message.answer("🚫 Вы уже авторизованы!")
         return
+    
     await state.set_state(Form.system)
-    await message.answer("Выберите систему:", reply_markup=AUTH_SYSTEMS, resize_keyboard=True)
+    await message.answer(
+        "Выберите <b>систему</b>:",
+        reply_markup=AUTH_SYSTEMS,
+        resize_keyboard=True
+    )
 
 
 @auth_router.message(Form.system)
 async def set_system(message: Message, state: FSMContext):
-    await state.update_data(system="myschool" if message.text == "Моя Школа" else "mesh")
-    if message.text == "МЭШ":
-        await state.clear()
-        await message.answer(
-            "Данная система в настоящее время <b>не поддерживается</b>. <i><tg-spoiler>Скоро...</tg-spoiler></i>",
-            reply_markup=ReplyKeyboardRemove()
-        )
-        return
-    
-    await state.set_state(Form.login_type)
-    await message.answer(
-        "Выберите тип логина:",
-        reply_markup=AUTH_LOGIN_TYPE
-    )
+    match message.text:
+        case "МЭШ":
+            await state.clear()
+            await message.answer(
+                "Данная система в настоящее время <b>не поддерживается</b>. <i><tg-spoiler>Скоро...</tg-spoiler></i>",
+                reply_markup=ReplyKeyboardRemove()
+            )
+        case "Моя Школа":
+            await state.update_data(
+                system="myschool" if message.text == "Моя Школа" else "mesh"
+            )
+            await state.set_state(Form.login_type)
+            await message.answer(
+                "Выберите тип логина:",
+                reply_markup=AUTH_LOGIN_TYPE
+            )
 
 
 @auth_router.message(Form.login_type)
 async def set_login_type(message: Message, state: FSMContext):
     match message.text:
         case "Логин и пароль":
-            await state.clear()
+            await state.update_data(login_type="logpass")
+            await state.set_state(Form.username)
             await message.answer(
-                "Данный тип авторизации в настоящее время <b>не поддерживается</b>. <i><tg-spoiler>Скоро...</tg-spoiler></i>",
+                f"""
+✅ <b>Отлично</b>!
+Теперь нужно ввести <b>логин и пароль</b> от вашего аккаунта системы <b>«Моя Школа»</b>.
+
+🔒 Мы <b>не сохраняем</b> данные для входа. На сервере будет хранится <b>только токен</b>, доступный исключительно <b>Вам</b>. 
+Исходный код <b>текущей</b> версии: {get_hash()}
+
+🔒 Введите <b>логин</b>:
+                """,
+                disable_web_page_preview=True,
                 reply_markup=ReplyKeyboardRemove()
             )
         case "Госуслуги":
+            await state.update_data(login_type="gosuslugi")
             await state.set_state(Form.username)
             await message.answer(
                 f"""
@@ -142,6 +164,7 @@ async def check_token_send_confirm(message: Message, token: str, state: FSMConte
         await message.answer(
             "⚠️ Кажется, такого аккаунта несуществует / были введены неверные данные / доступ запрещен.\nПожалуйста, зайдите с существующего аккаунта."
         )
+        return
     
     api = AsyncMobileAPI(token=token)
     try:
@@ -192,6 +215,7 @@ async def set_token(message: Message, state: FSMContext):
 async def set_username(message: Message, state: FSMContext):
     await state.update_data(username=message.text)
     await state.set_state(Form.password)
+    gosuslugi_events = "\n⚙ <b>Запретить доступ</b> в любой сервис можно на https://lk.gosuslugi.ru/settings/safety/events\n" if (await state.get_data())["login_type"] == "gosuslugi" else ""
     await message.answer(
         f"""
 ✅ <b>Отлично</b>!
@@ -199,9 +223,7 @@ async def set_username(message: Message, state: FSMContext):
 
 🔒 Мы <b>не сохраняем</b> данные для входа. На сервере будет хранится <b>только токен</b>, доступный исключительно <b>Вам</b>. 
 Исходный код <b>текущей</b> версии: {get_hash()}
-
-⚙ <b>Запретить доступ</b> в любой сервис можно на https://lk.gosuslugi.ru/settings/safety/events
-
+{gosuslugi_events}
 🔒 Введите <b>пароль</b>:
         """,
         disable_web_page_preview=True
@@ -215,19 +237,27 @@ async def set_password(message: Message, state: FSMContext):
 
     api = AsyncMobileAPI()
     try:
-        token = await api.esia_login(username=data["username"], password=data["password"])
+        token = (
+            await api.esia_login(username=data["username"], password=data["password"])
+            if data["login_type"] == "gosuslugi"
+            else await api.login(username=data["username"], password=data["password"])
+        )
     except APIError as e:
-        if e.error_type == "INVALID_PASSWORD":
+        if e.error_type in ["INVALID_PASSWORD", "authentication_error"]:
             await state.update_data(username=None, password=None)
             await state.set_state(Form.username)
             await message.answer(
                 "🚫 Неверный логин или пароль...\n🔒 Введите пожалуйста верный логин:"
             )
-        else:
+        elif e.error_type == "SOLVE_ANOMALY_REACTION":
             await state.clear()
             await message.answer(
-                f"🚫 Произошла неизвестная ошибка: {e}\nПопробуйте еще раз позднее."
+                "⚠️ <b>Госуслуги требуют решить капчу</b>!\nПожалуйста, <a href='https://esia.gosuslugi.ru/login/'>зайдите в Госуслуги</a> и решите капчу, затем авторизуйтесь снова.",
+                disable_web_page_preview=True
             )
+        else:
+            await state.clear()
+            raise e
     else:
         if token is False:
             await state.update_data(api=api)
@@ -240,12 +270,12 @@ async def set_password(message: Message, state: FSMContext):
             
 
 @auth_router.message(Form.confirm)
-async def set_confirm(message: Message, state: FSMContext):
+async def confirm(message: Message, state: FSMContext):
     match message.text:
         case "Нет":
             await state.clear()
             await message.answer(
-                "Хорошо, тогда авторизуйтесь заново.",
+                "Хорошо, тогда авторизуйтесь заново под нужным профилем.",
                 reply_markup=ReplyKeyboardRemove()
             )
         case "Да":
@@ -268,12 +298,13 @@ async def set_confirm(message: Message, state: FSMContext):
 
             await message.answer(
                 """
-✅ <b>Отлично</b>!\nНужные данные были получены, вам теперь доступно расписание, оценки, домашние задания и многое другое.
+✅ <b>Отлично</b>!\nНужные данные были получены, вам теперь доступно расписание, оценки, домашние задания, уведомления и многое другое.
 
-Вы всегда можете в любой момент выйти: /logout
+Вы <b>всегда</b> можете в любой момент <b>выйти</b>: /logout
                 """,
                 reply_markup=DEFAULT if message.chat.type == ChatType.PRIVATE else None
             )
+            await on_startup_myschool_router()
 
 
 @auth_router.message(Form.gosuslugi_mfa)
@@ -289,6 +320,19 @@ async def set_gosuslugi_mfa(message: Message, state: FSMContext):
         api: AsyncMobileAPI = data["api"]
         token = await api.esia_enter_MFA(code=int(message.text))
     except APIError as e:
-        await message.answer(f"🚫 Произошла <b>ошибка</b>: <code>{e}</code>")
+        if e.error_type == "SOLVE_ANOMALY_REACTION":
+            await state.clear()
+            await message.answer(
+                "⚠️ <b>Госуслуги требуют решить капчу</b>!\nПожалуйста, <a href='https://esia.gosuslugi.ru/login/'>зайдите в Госуслуги</a> и решите капчу, затем авторизуйтесь снова.",
+                disable_web_page_preview=True
+            )
+        elif e.error_type in ["INVALID_TTP", "INVALID_OTP"]:
+            await state.clear()
+            await message.answer(
+                "🚫 <b>Неверный</b> код.\nНачните авторизацию <b>заново</b>."
+            )
+        else:
+            await state.clear()
+            await message.answer(f"🚫 Произошла <b>ошибка</b>: <code>{e}</code>\n\nНачните авторизацию <b>заново</b>.")
     else:
         await check_token_send_confirm(message, token, state)

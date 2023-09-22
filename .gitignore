@@ -1,4 +1,4 @@
 .env
-.json
 __pycache__
-database.json
+settings.json
+users_db.json

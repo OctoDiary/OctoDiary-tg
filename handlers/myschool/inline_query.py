@@ -1,20 +1,21 @@
-from .router import router, MySchool, MySchoolUser, APIs
-from aiogram.types import Message, CallbackQuery, InlineQuery, ChosenInlineResult
-from aiogram import F, Bot
-from aiogram.filters import Command
-from aiogram.enums import ChatType
-from database import User, Database
+#               © Copyright 2023
+#          Licensed under the MIT License
+#        https://opensource.org/licenses/MIT
+#           https://github.com/OctoDiary
+
+from aiogram import Bot, F
+from aiogram.types import InlineQuery
+from database import User
+from utils.other import handler
+
+from .router import APIs, MySchool, MySchoolUser, router
+
 
 @router.inline_query(
     F.func(MySchoolUser).as_("user"),
     F.func(MySchool).as_("apis"),
-    F.text.strip() == ""
+    F.query.strip() == ""
 )
+@handler()
 async def inline_query(update: InlineQuery, bot: Bot, user: User, apis: APIs):
     pass
-    # await update.answer(
-    #     results=[
-            
-    #     ]
-    # )
-

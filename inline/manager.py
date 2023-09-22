@@ -1,7 +1,12 @@
-from datetime import datetime
+#               © Copyright 2023
+#          Licensed under the MIT License
+#        https://opensource.org/licenses/MIT
+#           https://github.com/OctoDiary
+
 import functools
 import logging
 import secrets
+from datetime import datetime
 from typing import Callable, List, Optional, Union
 from urllib.parse import urlparse
 
@@ -54,8 +59,7 @@ class BotInlineManager():
         self.routers = [self.router] + routers
         self.dispatcher.include_routers(*self.routers)
     
-    
-    
+
     async def callback_query_handler(self, call: types.CallbackQuery):
         try:
             await self.inline_buttons_map[call.data].run_callback(call)
@@ -448,7 +452,6 @@ class BotInlineManager():
                 ]
             )
     
-
     async def list(
         self,
         update: Union[
@@ -460,16 +463,28 @@ class BotInlineManager():
         ],
         strings: Strings,
         row_width: int = 3,
+        current_page: Union[int, str] = 1,
         *args, **kwargs
     ):
-        first = (strings if isinstance(strings, list) else list(strings.values()))[0]
+        first = (
+            (
+                strings
+                if isinstance(strings, list)
+                else list(strings.values())
+            )[current_page-1]
+            if isinstance(current_page, int)
+            else strings[current_page]
+        )
+        
 
         return await self.answer(
             update=update,
             response=first,
             reply_markup=self._inline_list_markup(
                 strings,
-                1
+                current_page
+                if current_page and (isinstance(current_page, int) and isinstance(strings, list)) or (isinstance(current_page, str) and isinstance(strings, dict))
+                else 1
                 if isinstance(strings, list)
                 else list(strings.keys())[0],
                 row_width
@@ -477,7 +492,6 @@ class BotInlineManager():
             **kwargs
         )
     
-
     async def _list_callback(self, call: types.CallbackQuery, new_text: str, markup: Callable[..., types.InlineKeyboardMarkup]):
         return await self.answer(
             update=call,

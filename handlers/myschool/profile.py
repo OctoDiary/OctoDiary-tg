@@ -1,11 +1,18 @@
-from .router import router, MySchool, APIs, MySchoolUser
-from aiogram.types import Message, CallbackQuery, InlineQuery, ChosenInlineResult
+#               © Copyright 2023
+#          Licensed under the MIT License
+#        https://opensource.org/licenses/MIT
+#           https://github.com/OctoDiary
+
 from aiogram import F
-from aiogram.filters import Command
 from aiogram.enums import ChatType
+from aiogram.filters import Command
+from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
+from database import Database, User
 from octodiary.exceptions import APIError
-from octodiary.types.myschool.mobile.family_profile import FamilyProfile, Child
-from database import User, Database
+from octodiary.types.myschool.mobile.family_profile import Child, FamilyProfile
+from utils.other import handler
+
+from .router import APIs, MySchool, MySchoolUser, router
 
 
 def child_profile_info(child: Child) -> str:
@@ -46,6 +53,7 @@ def profile_info(profile: FamilyProfile, from_db: str) -> str:
     F.text == "Профиль",
     F.chat.type == ChatType.PRIVATE
 )
+@handler()
 async def profile(update: Message | CallbackQuery, apis: APIs, user: User):
     """Профиль"""
 
@@ -63,6 +71,7 @@ async def profile(update: Message | CallbackQuery, apis: APIs, user: User):
     F.func(MySchoolUser).as_("user"),
     Command("logout")
 )
+@handler()
 async def logout_command(message: Message, user: User):
     """Выход"""
     await message.bot.inline.answer(
@@ -72,7 +81,9 @@ async def logout_command(message: Message, user: User):
             {
                 "text": "✅",
                 "callback": logout,
-                "args": (user,)
+                "kwargs": {
+                    "user": user
+                }
             },
             {
                 "text": "❌",
@@ -81,17 +92,18 @@ async def logout_command(message: Message, user: User):
         ]
     )
 
-
+@handler()
 async def logout(call: CallbackQuery, user: User):
-    if call.from_user.id != int(user.__id):
+    if call.from_user.id != int(user.id):
         await call.answer("Это не для тебя!", show_alert=True)
         return
 
     await call.answer("Выход...")
-    await call.message.answer("✅ Вы <b>вышли из аккаунта</b>.\n")
+    await call.message.answer("✅ Вы <b>вышли из аккаунта</b>.\n", reply_markup=ReplyKeyboardRemove())
+    await call.message.delete()
     Database().pop(str(call.from_user.id))
 
-
+@handler()
 async def cancel(call: CallbackQuery):
     await call.message.delete()
     await call.answer("Отмена...")

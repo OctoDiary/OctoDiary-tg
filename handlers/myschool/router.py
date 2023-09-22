@@ -1,3 +1,8 @@
+#               © Copyright 2023
+#          Licensed under the MIT License
+#        https://opensource.org/licenses/MIT
+#           https://github.com/OctoDiary
+
 from aiogram import Router
 from aiogram.types import CallbackQuery, ChosenInlineResult, InlineQuery, Message
 from database import Database, User

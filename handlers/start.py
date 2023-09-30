@@ -262,9 +262,20 @@ async def set_password(message: Message, state: FSMContext):
         if token is False:
             await state.update_data(api=api)
             await state.set_state(Form.gosuslugi_mfa)
-            await message.answer(
-                "🔐 Введите пожалуйста MFA (SMS/TOTP код):"
-            )
+            mfa_method = api._mfa_details["type"]
+            if mfa_method == "SMS":
+                phone = api._mfa_details["otp_details"]["phone"]
+                await message.answer(
+                    (
+                        "🔐 Введите пожалуйста SMS код для двухфакторной аутентификации"
+                        f" (MFA) присланный на номер телефона <code>{phone}</code>:\n"
+                    ),
+                    parse_mode="HTML"
+                )
+            else:
+                await message.answer(
+                    "🔐 Введите пожалуйста одноразовый код (TOTP):"
+                )
         else:
             await check_token_send_confirm(message, token, state)
             

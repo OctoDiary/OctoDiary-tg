@@ -23,7 +23,8 @@ router = Router(name="Start")
 def get_hash():
     try:
         hash_ = Repo().head.commit.hexsha
-        return f'<a href="https://github.com/OctoDiary/OctoDiary-tg/commit/{hash_}">#{hash_[:7]}</a>'
+        version = Repo().head.commit.message.splitlines()[0]
+        return f'<a href="https://github.com/OctoDiary/OctoDiary-tg/commit/{hash_}">#{hash_[:7]} (<b>{version}</b>)</a>'
     except Exception:
         return "<a href='https://github.com/OctoDiary/OctoDiary-tg'>#last-commit</a>"
 

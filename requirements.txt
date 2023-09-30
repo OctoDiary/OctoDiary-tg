@@ -1,7 +1,7 @@
 aiogram
 lightdb
 python-dotenv
-octodiary
+octodiary>=0.2.4
 gitpython
 pyjwt
 pyjwt[crypto]

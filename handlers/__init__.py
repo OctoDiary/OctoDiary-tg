@@ -3,16 +3,16 @@
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
 
-from .admins import AdminRouter
-from .mesh import MeshRouter
-from .myschool import MySchoolRouter
-from .start import auth_router as AuthRouter
-from .start import router as StartRouter
+from handlers.admins import AdminRouter
+from handlers.auth import auth_router as AuthRouter
+from handlers.mesh import MeshRouter
+from handlers.myschool import MySchoolRouter
+from handlers.start import router as StartRouter
 
 routers = [
     AdminRouter,
-    StartRouter,
     AuthRouter,
+    StartRouter,
     MySchoolRouter,
     MeshRouter,
 ]

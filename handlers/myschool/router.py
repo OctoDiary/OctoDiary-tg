@@ -5,6 +5,7 @@
 
 from aiogram import Router
 from aiogram.types import CallbackQuery, ChosenInlineResult, InlineQuery, Message
+
 from database import Database, User
 from octodiary.asyncApi.myschool import AsyncMobileAPI, AsyncWebAPI
 

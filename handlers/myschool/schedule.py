@@ -4,13 +4,14 @@
 #           https://github.com/OctoDiary
 
 from datetime import date, datetime, timedelta
-import logging
 
 from aiogram import F
 from aiogram.enums import ChatType
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
+
 from database import User
+from handlers.myschool.router import APIs, MySchool, MySchoolUser, router
 from octodiary.exceptions import APIError
 from octodiary.types.myschool.mobile import EventsResponse
 from octodiary.types.myschool.mobile.lesson_schedule_items import (
@@ -18,28 +19,34 @@ from octodiary.types.myschool.mobile.lesson_schedule_items import (
     LessonScheduleItems,
     Mark,
 )
-from utils.other import handler, pluralization_string, sort_dict_dy_date, mark as MARK
+from utils.other import handler, pluralization_string, sort_dict_by_date
+from utils.other import mark as MARK
+from utils.texts import Texts
 
-from .router import APIs, MySchool, MySchoolUser, router
 
-
-def day_schedule_info(evets: EventsResponse, from_db):
+def day_schedule_info(events: EventsResponse, from_db, *, inline: bool = False, exclude_marks: bool = False):
     days_lessons = {}
     def weekday(x):
         return {0: "понедельник", 1: "вторник", 2: "среду", 3: "четверг", 4: "пятницу", 5: "субботу", 6: "воскресенье"}[int(x)]
-    
-    for event in evets.response:
-        if event.lesson_type != "NORMAL":
-            continue
-        
+
+    available_EC: dict[str, bool] = {}
+
+    for event in events.response:
+
         start = datetime.strptime(event.start_at, "%Y-%m-%dT%H:%M:%S%z")
         end = datetime.strptime(event.finish_at, "%Y-%m-%dT%H:%M:%S%z")
-        
+
         date = start.date()
         date_str = f"{date.day:02}.{date.month:02}/{date.weekday()}"
 
         if date_str not in days_lessons:
             days_lessons[date_str] = []
+
+        lesson_info = f"[ <b>ID</b>: <code>{event.id}</code> ]"
+
+        if event.source == "EC":
+            available_EC[date_str] = True
+            lesson_info = "[ <b>ВД*</b> ]"
 
         homeworks = [
             homework.replace("\n", "</code>; <code>")
@@ -48,16 +55,16 @@ def day_schedule_info(evets: EventsResponse, from_db):
 
         days_lessons[date_str].append(
             (
-                f"• <b>{event.subject_name}</b>  "
-                f"[<code>{start.hour:02}:{start.minute:02}-{end.hour:02}:{end.minute:02}</code>] "
-                f"[ <b>ID</b>: <code>{event.id}</code> ]"
+                f"• <b>{event.subject_name}</b> "
+                f"[ <code>{start.hour:02}:{start.minute:02}-{end.hour:02}:{end.minute:02}</code> ] "
             )
-            + (f"\n  {'├' if event.cancelled or homeworks or event.marks else '└'} <b>Замена</b>: ✅" if event.replaced else '')
-            + (f"\n  {'├' if homeworks or event.marks else '└'} <b>Отмена</b>: ✅" if event.cancelled else '')
+            + lesson_info
+            + (f"\n  {'├' if event.cancelled or homeworks or event.marks else '└'} <b>Замена</b>: ✅" if event.replaced else "")
+            + (f"\n  {'├' if homeworks or event.marks else '└'} <b>Отмена</b>: ✅" if event.cancelled else "")
             + (
                 (
                     f"\n  {'├' if homeworks else '└'} <b>Оценки</b>: " + " | ".join([f"<code>{MARK(mark.value, mark.weight)}</code>" for mark in event.marks])
-                ) if event.marks else ""
+                ) if event.marks and not exclude_marks else ""
             )
             + (
                 (
@@ -72,24 +79,31 @@ def day_schedule_info(evets: EventsResponse, from_db):
                 ) if homeworks else ""
             )
         )
-    
-    return {
-        date_str.split("/")[0]: f"""
-🗓 <b>Расписание на {weekday(date_str.split("/")[1])}</b> [<code>{date_str.split("/")[0]}</code>]
-{from_db}
-""" + "\n".join(lessons) + """
 
-<b>Подробная информация</b> об уроке: <code>/lesson ID</code>
-"""
+    return {
+        date_str.split("/")[0]: Texts.MySchool.SCHEDULE_FOR_DAY(
+            WEEKDAY=date_str.split("/")[0],
+            DAY=weekday(date_str.split("/")[1]),
+            from_db=from_db
+        ) + "\n".join(lessons) + Texts.MySchool.LESSON_INFO_DETAIL(
+            PREFIX="/" if not inline else "@OctoDiaryBot "
+        ) + (
+            Texts.MySchool.LESSON_DESIGNATIONS
+            if available_EC.get(date_str, False)
+            else ""
+        )
         for date_str, lessons in days_lessons.items()
     }
 
 def mark_info(mark: Mark) -> str:
-    return f"""┌ <b>Оценка</b>: <code>{mark.value}</code>
-├ <b>Тип работы</b>: <code>{mark.control_form_name}</code>
-├ <b>Вес:</b> <code>{pluralization_string(mark.weight, ['балл', 'балла', 'баллов'])}</code>
-├ <b>Время выставления</b>: <code>{mark.updated_at.strftime("%d.%m.%Y %H:%M")}</code>
-└ <b>Комментарий</b>: <code>{mark.comment or "❌"}</code>"""
+    return Texts.MySchool.MARK_INFO_SECOND(
+        VALUE=MARK(mark.value, mark.weight),
+        CONTROL_FORM_NAME=mark.control_form_name,
+        WEIGHT=pluralization_string(mark.weight, ["балл", "балла", "баллов"]),
+        IS_EXAM_EMOJI="❗️" if mark.is_exam else "",
+        UPDATED_AT=mark.updated_at.strftime("%d.%m.%Y %H:%M"),
+        COMMENT=mark.comment or "❌"
+    )
 
 def homework_info(homework: LessonHomework) -> str:
     files = [
@@ -98,8 +112,10 @@ def homework_info(homework: LessonHomework) -> str:
         for file in material.items
     ] if homework.materials else []
 
-    return f"""┌ <b>Задание</b>: <code>{homework.homework}</code>
-└ <b>Прикреплённые файлы: {'✅' if files else '❌'}</b>""" + (
+    return Texts.MySchool.HOMEWORK_INFO(
+        HOMEWORK=homework.homework,
+        UPLOADED_FILES="✅" if files else "❌",
+    ) + (
         (
             ("\n   ├ " if len(files) > 1 else "")
             + "\n   ├ ".join(files[:-1])
@@ -109,24 +125,15 @@ def homework_info(homework: LessonHomework) -> str:
 
 
 def lesson_info(lesson: LessonScheduleItems) -> str:
-    return f"""
-<b>Подробная информация</b> об уроке: <code>{lesson.id}</code>
-
-• <b>Предмет</b>: <code>{lesson.subject_name}</code>
-• <b>Преподаватель</b>: <code>{lesson.teacher.last_name} {lesson.teacher.first_name} {lesson.teacher.middle_name}</code>
-• <b>Время</b>: <code>{lesson.begin_time} - {lesson.end_time}</code>
-• <b>Дата</b>: <code>{lesson.date}</code>
-• <b>Кабинет</b>: <code>{lesson.room_number}</code>""" + (
+    return Texts.MySchool.LESSON_INFO(lesson=lesson) + (
         (
-            "\n\n[ <b>Оценки</b> ]\n"
-            + (
+            Texts.MySchool.LESSON_INFO_DETAILS.MARKS + (
                 "\n".join([mark_info(mark) for mark in lesson.marks])
             )
         ) if lesson.marks else ""
     ) + (
         (
-            "\n\n[ <b>Домашнее задание</b> ]\n"
-            + (
+            Texts.MySchool.LESSON_INFO_DETAILS.HOMEWORKS + (
                 "\n".join([homework_info(homework) for homework in lesson.lesson_homeworks])
             )
         ) if lesson.lesson_homeworks else ""
@@ -141,7 +148,7 @@ def lesson_info(lesson: LessonScheduleItems) -> str:
 @router.message(
     F.func(MySchoolUser).as_("user"),
     F.func(MySchool).as_("apis"),
-    F.text == "Расписание",
+    F.text == Texts.Buttons.SCHEDULE,
     F.chat.type == ChatType.PRIVATE
 )
 @handler()
@@ -158,16 +165,16 @@ async def schedule(message: Message, apis: APIs, user: User):
                 today - timedelta(days= -1*(0 - today.weekday()))
             ),
             end_date=(
-                today + timedelta(days= 7+(6 - today.weekday()))
+                today + timedelta(days= 14+(6 - today.weekday()))
             )
         )
     except APIError:
         events = user.db_events
-        from_db = "<tg-spoiler>❕ Сервер не ответил на запрос, последние загруженные данные:</tg-spoiler>\n"
+        from_db = Texts.MySchool.FROM_DB
 
     strings = day_schedule_info(events, from_db)
     await message.bot.inline.list(
-        message, **sort_dict_dy_date(strings), row_width=5,
+        message, **sort_dict_by_date(strings), row_width=5,
     )
 
 
@@ -178,13 +185,13 @@ async def schedule(message: Message, apis: APIs, user: User):
 )
 @handler()
 async def get_lesson_info(message: Message, apis: APIs, user: User, command: CommandObject):
-    """Получить информацию об уроке"""
+    """Получить информацию o6 уроке"""
     lesson = await apis.mobile.get_lesson_schedule_items(
         profile_id=user.db_profile_id,
         student_id=user.db_profile["children"][0]["id"],
         lesson_id=command.args.strip()
     )
-    
+
     return await message.answer(
         lesson_info(lesson)
     )

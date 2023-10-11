@@ -9,28 +9,28 @@ import secrets
 from datetime import datetime
 from typing import Callable, List, Optional, Union
 from urllib.parse import urlparse
+from utils.texts import Texts
 
 from aiogram import Bot, Dispatcher, F, Router, types
-from loop import loop
 
-from .types import ButtonCallback
+from inline.types import ButtonCallback
+from loop import loop
 
 logger = logging.getLogger("BotInlineManager")
 
-ReplyMarkup = Union[List[List[dict]], List[dict], dict]
+ReplyMarkup = Union[list[list[dict]], list[dict], dict]
 Strings = Union[
-    List[str],
+    list[str],
     dict[str, str]
 ]
 
 
-class BotInlineManager():
+class BotInlineManager:
     """Bot full inline manager"""
 
-    def __init__(self, bot: Bot, dispatcher: Dispatcher, routers: List[Router]):
+    def __init__(self, bot: Bot, dispatcher: Dispatcher, routers: list[Router]):
         self.bot = bot
         self.dispatcher = dispatcher
-        
 
         self.bot.inline = self.bot.inline_manager = self.dispatcher.inline = self.dispatcher.inline_manager = self
 
@@ -41,32 +41,28 @@ class BotInlineManager():
             for data, callback in self.inline_buttons_map.copy().items():
                 if callback.delete_time <= datetime.now():
                     del self.inline_buttons_map[data]
-                    self.inline_buttons_deadlined += [data]
 
         self.inline_buttons_map: dict[str, ButtonCallback] = {}
         self.chosen_inline_results_map = {}
-        self.inline_buttons_deadlined: list[str] = []
 
         self.router = Router(name="BotInlineManager")
         self.router.callback_query.register(
             self.callback_query_handler,
             F.func(lambda q: q.data in self.inline_buttons_map)
         )
-        self.router.callback_query.register(
-            functools.partial(self.__answer_callback, text="Срок действия данной кнопки истёк.\nПожалуйста, выполните команду снова.", show_alert=True),
-            F.func(lambda q: q.data in self.inline_buttons_deadlined)
-        )
-        self.routers = [self.router] + routers
+        self.routers = [self.router, *routers]
         self.dispatcher.include_routers(*self.routers)
-    
+
 
     async def callback_query_handler(self, call: types.CallbackQuery):
-        try:
+        if call.data in self.inline_buttons_map:
             await self.inline_buttons_map[call.data].run_callback(call)
             del self.inline_buttons_map[call.data]
-            self.inline_buttons_deadlined += [call.data]
-        except KeyError:
-            pass
+        else:
+            return await call.answer(
+                text=Texts.CALLBACK_DEADLINED,
+                show_alert=True
+            )
 
     async def __answer_callback(
         self,
@@ -78,7 +74,7 @@ class BotInlineManager():
         return await call.answer(
             text=text, show_alert=show_alert, **kwargs
         )
-    
+
     async def validate_inline_markup(
         self,
         buttons: Optional[
@@ -123,7 +119,7 @@ class BotInlineManager():
             else markup
         )
 
-    def generate_markup(self, markup: Optional[ReplyMarkup]) -> Optional[types.InlineKeyboardMarkup]:
+    def generate_markup(self, markup: Optional[ReplyMarkup], *, disable_deadline: bool = False) -> Optional[types.InlineKeyboardMarkup]:
         """Generate ``aiogram.types.InlineKeyboardMarkup`` from ``CustomMarkupType (ReplyMarkup)``"""
         if not markup:
             return None
@@ -146,11 +142,11 @@ class BotInlineManager():
                         url=answer.get("url", None),
                         cache_time=answer.get("cache", answer.get("cache_time", None))
                     )
-                
+
                 if "callback_data" not in button:
                     button["callback_data"] = button.get("data", secrets.token_hex(8))
-                
-                
+
+
         for row in markup_map:
             line = []
             for button in row:
@@ -160,14 +156,14 @@ class BotInlineManager():
                 if isinstance(button, types.InlineKeyboardButton):
                     line.append(button)
                     continue
-            
+
                 try:
                     if "url" in button:
                         try:
                             _ = bool(urlparse(button["url"]).netloc)
                         except Exception:
                             return False
-                        
+
                         line.append(
                             types.InlineKeyboardButton(
                                 text=button["text"],
@@ -185,6 +181,7 @@ class BotInlineManager():
                             data=button["callback_data"],
                             text=button["text"],
                             callback=button["callback"],
+                            disable_deadline=disable_deadline,
                             *button.get("args", ()),
                             **button.get("kwargs", {})
                         )
@@ -238,20 +235,12 @@ class BotInlineManager():
                         )
                 except KeyError:
                     return
-            
+
             if line:
                 keyboard.append(line)
-        
+
         return types.InlineKeyboardMarkup(inline_keyboard=keyboard)
 
-    @property
-    def emptybtn(self) -> types.InlineKeyboardButton:
-        return types.InlineKeyboardButton(text="­", callback_data="wait")
-    
-    @property
-    def replykbrm(self) -> types.ReplyKeyboardRemove:
-        return types.ReplyKeyboardRemove()
-    
     async def send_message(
         self,
         chat_id: int,
@@ -281,7 +270,7 @@ class BotInlineManager():
             reply_markup=self.generate_markup(reply_markup),
             **kwargs
         )
-    
+
     async def edit_message_reply_markup(
         self,
         chat_id: int,
@@ -311,11 +300,11 @@ class BotInlineManager():
             reply_markup=self.generate_markup(reply_markup),
             **kwargs
         )
-    
+
 
     def _list_markup(self, *args, **kwargs):
         return (lambda: self._inline_list_markup(*args, **kwargs))
-    
+
     def chunks(self, lst, n):
         return [lst[i : i + n] for i in range(0, len(lst), n)]
 
@@ -451,7 +440,7 @@ class BotInlineManager():
                     }
                 ]
             )
-    
+
     async def list(
         self,
         update: Union[
@@ -464,7 +453,9 @@ class BotInlineManager():
         strings: Strings,
         row_width: int = 3,
         current_page: Union[int, str] = 1,
-        *args, **kwargs
+        *,
+        disable_deadline: bool = False,
+        **kwargs
     ):
         first = (
             (
@@ -475,7 +466,7 @@ class BotInlineManager():
             if isinstance(current_page, int)
             else strings[current_page]
         )
-        
+
 
         return await self.answer(
             update=update,
@@ -486,12 +477,13 @@ class BotInlineManager():
                 if current_page and (isinstance(current_page, int) and isinstance(strings, list)) or (isinstance(current_page, str) and isinstance(strings, dict))
                 else 1
                 if isinstance(strings, list)
-                else list(strings.keys())[0],
+                else next(iter(strings.keys())),
                 row_width
             ),
+            disable_deadline=disable_deadline,
             **kwargs
         )
-    
+
     async def _list_callback(self, call: types.CallbackQuery, new_text: str, markup: Callable[..., types.InlineKeyboardMarkup]):
         return await self.answer(
             update=call,
@@ -515,19 +507,23 @@ class BotInlineManager():
             types.InlineKeyboardMarkup,
             types.ReplyKeyboardRemove,
             types.ReplyKeyboardMarkup,
-        ]], **kwargs
+        ]],
+        *,
+        disable_deadline: bool = False,
+        **kwargs
     ):
         if isinstance(reply_markup, (list, dict)):
-            new_reply_markup = self.generate_markup(reply_markup)
+            new_reply_markup = self.generate_markup(reply_markup, disable_deadline=disable_deadline)
         else:
             new_reply_markup = reply_markup
-        
+
         if isinstance(update, types.Message):
             edit = (update.from_user.id == self.bot.id and not update.forward_date)
             if isinstance(response, str):
                 return await (update.edit_text if edit else update.answer)(
                     text=response,
-                    reply_markup=new_reply_markup, **kwargs
+                    reply_markup=new_reply_markup,
+                    **kwargs
                 )
             else:
                 return await self.list(update, response, **kwargs)
@@ -555,5 +551,5 @@ class BotInlineManager():
                 inline_message_id=update.inline_message_id,
                 reply_markup=new_reply_markup, **kwargs
             )
-        
+
         return False

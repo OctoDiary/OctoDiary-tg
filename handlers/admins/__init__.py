@@ -3,8 +3,8 @@
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
 
-from .router import AdminRouter
-from . import commands
+from handlers.admins import commands
+from handlers.admins.router import AdminRouter
 
 __all__ = [
     "AdminRouter",

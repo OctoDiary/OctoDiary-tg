@@ -3,8 +3,8 @@
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
 
-from .manager import BotInlineManager, ReplyMarkup
-from .types import ButtonCallback
+from inline.manager import BotInlineManager, ReplyMarkup
+from inline.types import ButtonCallback
 
 __all__ = [
     "BotInlineManager",

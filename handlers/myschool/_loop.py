@@ -4,19 +4,21 @@
 #           https://github.com/OctoDiary
 
 import asyncio
-from datetime import date, timedelta
 import datetime
+from datetime import date, timedelta
 
 import jwt
 from aiogram import Bot
+
 from database import Database
+from handlers.myschool.router import APIs, router as MySchoolRouter
+from handlers.myschool.scheduler import run_scheduler_for_chat
 from loop import loop
 from octodiary.asyncApi.myschool import AsyncMobileAPI, AsyncWebAPI
 from octodiary.exceptions import APIError
 from octodiary.types.myschool.mobile import EventsResponse, Notification
 from utils.other import mark, pluralization_string
-
-from .router import router as MySchoolRouter
+from utils.texts import Texts
 
 db = Database()
 
@@ -66,18 +68,34 @@ async def on_startup_myschool_router(**kwargs):
 
 
 def generate_text_notification(notif: Notification):
-    text = "🔔 <b>Новое уведомление</b>"
+    text = Texts.MySchool.Notifications.TITLE
     match notif.event_type:
         case "create_mark":
-            text += " [<code>Оценка</code>]\n\n"
-            text += f"┌ <b>Предмет</b>: <code>{notif.subject_name}</code>\n"
+            text += Texts.MySchool.Notifications.Mark.SUBTITLE
+            text += Texts.MySchool.Notifications.Mark.SUBJECT(
+                SUBJECT_NAME=notif.subject_name
+            )
             if notif.old_mark_value:
-                text += f"├ <b>Старая</b> оценка: <code>{notif.old_mark_value}</code>\n"
-            text += f"├ <b>Новая оценка</b>: <code>{mark(notif.new_mark_value, notif.new_mark_weight)}</code>\n"
-            text += f"├ <b>Тип</b> работы: <code>{notif.control_form_name}</code> - {pluralization_string(notif.new_mark_weight, ['балл', 'балла', 'баллов'])} {'❗️' if notif.new_is_exam else ''}\n"
-            text += f"└ <b>Дата и время</b> урока: <code>{notif.lesson_date}</code>\n\n"
-            text += f"<tg-spoiler>#newMark #notification #date_{notif.datetime[:10].replace('-', '_')}</tg-spoiler>"
-        
+                text += Texts.MySchool.Notifications.Mark.OLD_MARK(
+                    MARK=str(notif.old_mark_value)
+                )
+            text += Texts.MySchool.Notifications.Mark.NEW_MARK(
+                MARK=mark(notif.new_mark_value, notif.new_mark_weight)
+            )
+            text += Texts.MySchool.Notifications.Mark.WORK_TYPE(
+                CONTROL_FORM_NAME=notif.control_form_name,
+                WEIGHT=pluralization_string(
+                    notif.new_mark_weight,
+                    ["балл", "балла", "баллов"]
+                ),
+                IS_EXAM_EMOJI="❗️" if notif.new_is_exam else ""
+            )
+            text += Texts.MySchool.Notifications.Mark.LESSON_TIME(
+                TIME=str(notif.lesson_date)
+            )
+            text += Texts.MySchool.Notifications.Mark.HASHTAGS(
+                DATE=notif.datetime[:10].replace("-", "_")
+            )
         case _:
             return ""
 
@@ -90,7 +108,7 @@ async def send_notications(bot: Bot, **kwargs):
     for user_id, user in {
         user_id: db.user(user_id)
         for user_id in db.keys()
-        if user_id.isdigit() and db.get_key(user_id, "system", None) == "myschool"
+        if user_id.isdigit() and db.get_key(user_id, "system", None) == Texts.Systems.MY_SCHOOL
     }.items():
         await asyncio.sleep(1)
         if not (settings := user.db_settings) or not settings.get("notifications", True):
@@ -105,7 +123,7 @@ async def send_notications(bot: Bot, **kwargs):
             notifications = []
         notifications.reverse()
 
-            
+
         for notification in notifications:
             id = int(
                 notification
@@ -116,7 +134,7 @@ async def send_notications(bot: Bot, **kwargs):
                 .replace(".", "")
             )
             if user.db_skip_notifications:
-                user.db_notified_ids = user.db_notified_ids + [id]
+                user.db_notified_ids = [*user.db_notified_ids, id]
                 continue
 
             if (
@@ -125,15 +143,15 @@ async def send_notications(bot: Bot, **kwargs):
                 and (text := generate_text_notification(notification))
             ):
                 await bot.send_message(int(user_id), text)
-                user.db_notified_ids = user.db_notified_ids + [id]
-        
+                user.db_notified_ids = [*user.db_notified_ids, id]
+
         if user.db_skip_notifications:
             user.db_skip_notifications = False
 
 
 @MySchoolRouter.startup()
 @loop(60)
-async def refresh_tokens(bot: Bot, **kwargs):
+async def refresh_tokens(**kwargs):
     for user in {
         db.user(user_id)
         for user_id in db.keys()
@@ -147,3 +165,24 @@ async def refresh_tokens(bot: Bot, **kwargs):
         if (now.year, now.month, now.day, now.hour-1, now.minute) < (exp.year, exp.month, exp.day, exp.hour, exp.minute) > (now.year, now.month, now.day, now.hour, now.minute):
             user.token = await AsyncWebAPI(token=user.token).refresh_token(0, 0)
 
+
+@MySchoolRouter.startup()
+@loop(60 * 2.5)
+async def scheduler_loop(bot: Bot, **kwargs):
+    for user in {
+        db.user(user_id)
+        for user_id in db.keys()
+        if user_id.isdigit() and db.get_key(user_id, "system", None) == "myschool"
+    }:
+        await asyncio.sleep(1)
+        scheduler = user.db_scheduler
+        if not scheduler:
+            continue
+
+        for chat_id in scheduler:
+            await run_scheduler_for_chat(
+                chat_id=chat_id,
+                apis=APIs(token=user.token),
+                user=user,
+                bot=bot,
+            )

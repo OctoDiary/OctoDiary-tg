@@ -10,71 +10,73 @@ from aiogram.types import (
     ReplyKeyboardMarkup,
 )
 
+from utils.texts import Texts
+
 DEFAULT = ReplyKeyboardMarkup(keyboard=[
     [
-        KeyboardButton(text="Расписание"),
-        KeyboardButton(text="Профиль")
+        KeyboardButton(text=Texts.Buttons.SCHEDULE),
+        KeyboardButton(text=Texts.Buttons.PROFILE)
     ],
     [
-        KeyboardButton(text="Д/З [Ближайшее]"),
-        KeyboardButton(text="Д/З [Прошедшее]")
+        KeyboardButton(text=Texts.Buttons.HOMEWORKS_UPCOMING),
+        KeyboardButton(text=Texts.Buttons.HOMEWORKS_PAST)
     ],
     [
-        KeyboardButton(text="Оценки [По дате]"),
-        KeyboardButton(text="Оценки [По предмету]")
+        KeyboardButton(text=Texts.Buttons.MARKS_BY_DATE),
+        KeyboardButton(text=Texts.Buttons.MARKS_BY_SUBJECT)
     ],
     [
-        KeyboardButton(text="Настройки"),
-        KeyboardButton(text="О проекте")
+        KeyboardButton(text=Texts.Buttons.SETTINGS),
+        KeyboardButton(text=Texts.Buttons.PROJECT_ABOUT)
     ]
 ], resize_keyboard=True, selective=True)
 
 
 AUTH_SYSTEMS = ReplyKeyboardMarkup(keyboard=[
     [
-        KeyboardButton(text="Моя Школа")
+        KeyboardButton(text=Texts.MY_SCHOOL)
     ],
     [
-        KeyboardButton(text="МЭШ")
+        KeyboardButton(text=Texts.MESH)
     ]
 ], resize_keyboard=True, selective=True)
 
 
 AUTH_LOGIN_TYPE = ReplyKeyboardMarkup(keyboard=[
     [
-        KeyboardButton(text="Госуслуги")
+        KeyboardButton(text=Texts.Gosuslugi)
     ],
     [
-        KeyboardButton(text="Логин и пароль")
+        KeyboardButton(text=Texts.LoginAndPassword)
     ],
     [
-        KeyboardButton(text="AUPD-TOKEN")
+        KeyboardButton(text=Texts.AUPD_TOKEN)
     ]
 ], resize_keyboard=True, selective=True)
 
 
 YES_OR_NO = ReplyKeyboardMarkup(keyboard=[
     [
-        KeyboardButton(text="Да"),
-        KeyboardButton(text="Нет")
+        KeyboardButton(text=Texts.YES),
+        KeyboardButton(text=Texts.NO)
     ]
 ], resize_keyboard=True, selective=True)
 
 
 ABOUT = InlineKeyboardMarkup(inline_keyboard=[
     [
-        InlineKeyboardButton(text="Моя Школа", url="https://myschool.mosreg.ru/"),
-        InlineKeyboardButton(text="МЭШ", url="https://school.mos.ru/")
+        InlineKeyboardButton(text=Texts.MY_SCHOOL, url=Texts.Buttons.MY_SCHOOL_URL),
+        InlineKeyboardButton(text=Texts.MESH, url=Texts.Buttons.MESH_URL)
     ],
     [
-        InlineKeyboardButton(text="OctoDiary", url="https://github.com/OctoDiary"),
-        InlineKeyboardButton(text="OctoDiary-py", url="https://github.com/OctoDiary/OctoDiary-py")
+        InlineKeyboardButton(text="OctoDiary", url=Texts.Buttons.ORGANIZATION_URL),
+        InlineKeyboardButton(text="OctoDiary-py", url=Texts.Buttons.PROJECT_LIBRARY_URL)
     ],
     [
-        InlineKeyboardButton(text="OctoDiary-tg", url="https://github.com/OctoDiary/OctoDiary-tg"),
-        InlineKeyboardButton(text="bxkr", url="https://github.com/bxkr"),
+        InlineKeyboardButton(text="OctoDiary-tg", url=Texts.Buttons.PROJECT_URL),
+        InlineKeyboardButton(text="bxkr", url=Texts.Buttons.bxkr_URL),
     ],
     [
-        InlineKeyboardButton(text="Den4ikSuperOstryyPer4ik", url="https://github.com/Den4ikSuperOstryyPer4ik"),
+        InlineKeyboardButton(text="Den4ikSuperOstryyPer4ik", url=Texts.Buttons.Den4ikSuperOstryyPer4ik_URL),
     ]
 ])

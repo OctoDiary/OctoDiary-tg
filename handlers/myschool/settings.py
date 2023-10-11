@@ -3,39 +3,32 @@
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
 
+from typing import Optional
+
 from aiogram import F
 from aiogram.enums import ChatType
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
+
 from database import User
+from handlers.myschool.router import APIs, MySchool, MySchoolUser, router
 from utils.other import handler
+from utils.texts import Texts
 
-from .router import APIs, MySchool, MySchoolUser, router
-
-TEXT = """
-⚙️ <b>Настройки</b>
-
-• <b>Цели</b> - покажут, сколько осталось оценок до желаемого среднего балла
-• <b>Уведомления</b> - включить / отключить уведомления определенных событий
-
-"""
-NOTIFICATIONS = """
-⚙️ <b>Настройки</b> [<code>Уведомления</code>]
-
-• <b>Оценки</b> - уведомления о новых оценках (или об изменении какой-либо оценки)
-"""
+TEXT = Texts.MySchool.SETTINGS
+NOTIFICATIONS = Texts.MySchool.SETTINGS_NOTIFICATIONS
 
 
-def markup(user: User, apis: APIs, section: str = None):
+def markup(user: User, apis: APIs, section: Optional[str] = None):
     return [
         [
             {
-                "text": "Цели > " + ("✅" if user.db_settings.get("goals", False) else "❌"),
+                "text": Texts.Buttons.SETTINGS_GOALS + ("✅" if user.db_settings.get("goals", False) else "❌"),
                 "callback": goals,
                 "kwargs": {"apis": apis, "user": user}
             },
             {
-                "text": "Уведомления",
+                "text": Texts.Buttons.NOTIFICATIONS,
                 "callback": notifications,
                 "kwargs": {"apis": apis, "user": user}
             },
@@ -43,12 +36,12 @@ def markup(user: User, apis: APIs, section: str = None):
     ] if not section else [
         [
             {
-                "text": "Оценки > " + ("✅" if user.db_settings.get("notifications", {}).get("create_mark", False) else "❌"),
+                "text": Texts.Buttons.MARKS + ("✅" if user.db_settings.get("notifications", {}).get("create_mark", False) else "❌"),
                 "callback": notifications,
                 "kwargs": {"apis": apis, "user": user, "attr": "create_mark"}
             },
             {
-                "text": "Назад",
+                "text": Texts.Buttons.BACK,
                 "callback": settings,
                 "kwargs": {"apis": apis, "user": user}
             }
@@ -91,17 +84,15 @@ async def goals(update: CallbackQuery, apis: APIs, user: User):
 
 
 @handler()
-async def notifications(update: CallbackQuery, apis: APIs, user: User, attr: str = None):
+async def notifications(update: CallbackQuery, apis: APIs, user: User, attr: Optional[str] = None):
     if attr:
         settings = user.db_settings
         settings["notifications"] = settings.get("notifications", {})
         settings["notifications"][attr] = not settings["notifications"].get(attr, False)
         user.db_settings = settings
-        
+
     await update.bot.inline.answer(
         update=update,
         response=NOTIFICATIONS,
         reply_markup=markup(user, apis, "notifications")
     )
-
-

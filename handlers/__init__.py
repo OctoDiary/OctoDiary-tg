@@ -5,7 +5,7 @@
 
 from handlers.admins import AdminRouter
 from handlers.auth import auth_router as AuthRouter
-from handlers.mesh import MeshRouter
+from handlers.mes import MesRouter
 from handlers.myschool import MySchoolRouter
 from handlers.start import router as StartRouter
 
@@ -14,5 +14,5 @@ routers = [
     AuthRouter,
     StartRouter,
     MySchoolRouter,
-    MeshRouter,
+    MesRouter,
 ]

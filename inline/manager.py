@@ -47,10 +47,9 @@ class BotInlineManager:
 
         self.router = Router(name="BotInlineManager")
         self.router.callback_query.register(
-            self.callback_query_handler,
-            F.func(lambda q: q.data in self.inline_buttons_map)
+            self.callback_query_handler
         )
-        self.routers = [self.router, *routers]
+        self.routers = [*routers, self.router]
         self.dispatcher.include_routers(*self.routers)
 
 

@@ -12,11 +12,11 @@ from aiogram.filters import Command
 from aiogram.types import Message
 
 from database import User
-from handlers.myschool.router import APIs, MySchool, MySchoolUser, isMySchoolUser, router
-from octodiary.types.myschool.mobile.marks import Marks
-from octodiary.types.myschool.mobile.marks import PayloadItem as MarkPayloadItem
-from octodiary.types.myschool.mobile.short_subject_marks import PayloadItem as ShortSubjectPayloadItem
-from octodiary.types.myschool.mobile.short_subject_marks import ShortSubjectMarks
+from handlers.mes.router import APIs, Mes, MesUser, isMesUser, router
+from octodiary.types.mes.mobile.marks import Marks
+from octodiary.types.mes.mobile.marks import Payload as MarkPayloadItem
+from octodiary.types.mes.mobile.short_subject_marks import Payload as ShortSubjectPayloadItem
+from octodiary.types.mes.mobile.short_subject_marks import ShortSubjectMarks
 from utils.other import handler, pluralization_string, sort_dict_by_date
 from utils.other import mark as MARK
 from utils.texts import Texts
@@ -98,15 +98,15 @@ def marks_sorted_by_subject_info(marks_short: ShortSubjectMarks, goals: bool = F
 
 
 @router.message(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
     Command("marks_by_date")
 )
 @router.message(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
     F.text == Texts.Buttons.MARKS_BY_DATE,
     F.chat.type == ChatType.PRIVATE
 )
@@ -129,15 +129,15 @@ async def marks_by_date(message: Message, apis: APIs, user: User):
 
 
 @router.message(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
     Command("marks_by_subject")
 )
 @router.message(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
     F.text == Texts.Buttons.MARKS_BY_SUBJECT,
     F.chat.type == ChatType.PRIVATE
 )

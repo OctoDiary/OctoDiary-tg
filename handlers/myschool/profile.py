@@ -9,7 +9,7 @@ from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 
 from database import Database, User
-from handlers.myschool.router import APIs, MySchool, MySchoolUser, router
+from handlers.myschool.router import APIs, MySchool, MySchoolUser, isMySchoolUser, router
 from octodiary.exceptions import APIError
 from octodiary.types.myschool.mobile.family_profile import Child, FamilyProfile
 from utils.other import handler
@@ -33,19 +33,21 @@ def profile_info(profile: FamilyProfile, from_db: str) -> str:
     )
 
     if profile.profile.type == "parent":
-        text += Texts.MySchool.PROFILE_INFO_CHILDREN
+        text += Texts.PROFILE_INFO_CHILDREN
         text += "\n".join([child_profile_info(child) for child in profile.children])
 
-    text += Texts.MySchool.PROFILE_INFO_LOGOUT
+    text += Texts.PROFILE_INFO_LOGOUT
     return text
 
 
 @router.message(
+    F.func(isMySchoolUser),
     F.func(MySchoolUser).as_("user"),
     F.func(MySchool).as_("apis"),
     Command("profile")
 )
 @router.message(
+    F.func(isMySchoolUser),
     F.func(MySchoolUser).as_("user"),
     F.func(MySchool).as_("apis"),
     F.text == Texts.Buttons.PROFILE,
@@ -60,12 +62,13 @@ async def profile(update: Message | CallbackQuery, apis: APIs, user: User):
         profile = await apis.mobile.get_profile(user.db_profile_id)
     except APIError:
         profile = FamilyProfile.model_validate(user.db_profile)
-        from_db = Texts.MySchool.FROM_DB
+        from_db = Texts.FROM_DB
 
     await update.answer(text=profile_info(profile, from_db))
 
 
 @router.message(
+    F.func(isMySchoolUser),
     F.func(MySchoolUser).as_("user"),
     Command("logout")
 )
@@ -74,7 +77,7 @@ async def logout_command(message: Message, user: User):
     """Выход"""
     await message.bot.inline.answer(
         update=message,
-        response=Texts.MySchool.LOGOUT_CONFIRM,
+        response=Texts.LOGOUT_CONFIRM,
         reply_markup=[
             {
                 "text": "✅",

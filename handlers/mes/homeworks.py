@@ -11,7 +11,7 @@ from aiogram.filters import Command
 from aiogram.types import Message
 
 from database import User
-from handlers.myschool.router import APIs, MySchool, MySchoolUser, isMySchoolUser, router
+from handlers.mes.router import APIs, Mes, MesUser, isMesUser, router
 from octodiary.types.myschool.mobile import ShortHomeworks
 from utils.other import handler, sort_dict_by_date
 from utils.texts import Texts
@@ -43,15 +43,15 @@ def homeworks_info(homeworks: ShortHomeworks):
 
 
 @router.message(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
     Command("homeworks_upcoming")
 )
 @router.message(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
     F.text == Texts.Buttons.HOMEWORKS_UPCOMING,
     F.chat.type == ChatType.PRIVATE
 )
@@ -74,15 +74,15 @@ async def homeworks_upcoming(message: Message, apis: APIs, user: User):
 
 
 @router.message(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
     Command("homeworks_past")
 )
 @router.message(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
     F.text == Texts.Buttons.HOMEWORKS_PAST,
     F.chat.type == ChatType.PRIVATE
 )
@@ -102,3 +102,4 @@ async def homeworks_past(message: Message, apis: APIs, user: User):
         row_width=5,
         **sort_dict_by_date(homeworks_info(homeworks), reverse=True)
     )
+

@@ -67,18 +67,6 @@ known-first-party = ["octodiary"]
 ban-relative-imports = "all"
 
 
-[tool.mypy]
-python_version = "3.11"
-check_untyped_defs = true
-disallow_untyped_defs = true
-no_implicit_optional = true
-show_error_codes = true
-strict_equality = true
-warn_return_any = true
-warn_unused_configs = true
-warn_redundant_casts = true
-
-
 [tool.black]
 line-length = 120
 target-version = ["py311"]

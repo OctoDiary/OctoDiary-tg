@@ -7,44 +7,46 @@ from aiogram import Router
 from aiogram.types import CallbackQuery, ChosenInlineResult, InlineQuery, Message
 
 from database import Database, User
-from octodiary.asyncApi.myschool import AsyncMobileAPI, AsyncWebAPI
+from octodiary.asyncApi.mes import AsyncMobileAPI
 
-router = Router(name="MySchoolRouter")
+from utils.texts import Texts
+
+router = Router(name="MesRouter")
 
 
 class APIs:
     def __init__(self, token: str) -> None:
         self.mobile = AsyncMobileAPI(token)
-        self.web = AsyncWebAPI(token)
+        self.web = None
 
 
-def MySchool(
+def Mes(
     update: Message | CallbackQuery | InlineQuery | ChosenInlineResult
 ) -> APIs | bool:
     if (
-        user.system == "myschool" and bool(user.token)
+        user.system == Texts.Systems.MES and bool(user.token)
         if update.from_user and (user := Database().user(update.from_user.id))
         else False
     ):
         return APIs(user.token)
     return False
 
-def MySchoolUser(
+def MesUser(
     update: Message | CallbackQuery | InlineQuery | ChosenInlineResult
 ) -> User | bool:
     return (
         user
         if update.from_user
         and (user := Database().user(update.from_user.id))
-        and user.system == "myschool"
+        and user.system == Texts.Systems.MES
         and bool(user.token)
         else False
     )
 
-def isMySchoolUser(update: Message | CallbackQuery | InlineQuery | ChosenInlineResult) -> bool:
+def isMesUser(update: Message | CallbackQuery | InlineQuery | ChosenInlineResult) -> bool:
     return (
         update.from_user
         and (user := Database().user(update.from_user.id))
-        and user.system == "myschool"
+        and user.system == Texts.Systems.MES
         and bool(user.token)
     )

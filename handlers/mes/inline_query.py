@@ -18,22 +18,23 @@ from aiogram.types import (
 )
 
 from database import User
-from handlers.myschool.homeworks import homeworks_info
-from handlers.myschool.marks import marks_sorted_by_date_info, marks_sorted_by_subject_info
-from handlers.myschool.profile import profile_info
-from handlers.myschool.router import APIs, MySchool, MySchoolUser, isMySchoolUser, router
-from handlers.myschool.schedule import day_schedule_info, lesson_info
-from handlers.myschool.settings import TEXT, markup
+from handlers.mes.homeworks import homeworks_info
+from handlers.mes.marks import marks_sorted_by_date_info, marks_sorted_by_subject_info
+from handlers.mes.profile import profile_info
+from handlers.mes.router import APIs, Mes, MesUser, isMesUser, router
+from handlers.mes.schedule import day_schedule_info, lesson_info
+from handlers.mes.settings import TEXT, markup
 from octodiary.exceptions import APIError
-from octodiary.types.myschool.mobile import FamilyProfile
+from octodiary.types.mes.mobile import FamilyProfile
+from handlers.mes.visits import visits_info
 from utils.other import handler, sort_dict_by_date
 from utils.texts import Texts
 
 
 @router.inline_query(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser),
-    F.func(MySchool),
+    F.func(isMesUser),
+    F.func(MesUser),
+    F.func(Mes),
     F.query.strip() == ""
 )
 @handler()
@@ -56,7 +57,7 @@ async def inline_query(update: InlineQuery):
                 ),
                 **result_info
             )
-            for result_info in Texts.MySchool.Inline.values()
+            for result_info in Texts.Mes.Inline.values()
         ],
         cache_time=15,
         is_personal=True,
@@ -67,17 +68,17 @@ async def inline_query(update: InlineQuery):
 
 
 @router.chosen_inline_result(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
-    F.result_id == Texts.MySchool.Inline.SCHEDULE.id,
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
+    F.result_id == Texts.Mes.Inline.SCHEDULE.id,
     F.inline_message_id.func(lambda IMI: IMI is not None)
 )
 @router.callback_query(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
-    F.data == Texts.MySchool.Inline.SCHEDULE.id
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
+    F.data == Texts.Mes.Inline.SCHEDULE.id
 )
 @handler()
 async def schedule_load(update: ChosenInlineResult, bot: Bot, user: User, apis: APIs):
@@ -108,45 +109,45 @@ async def schedule_load(update: ChosenInlineResult, bot: Bot, user: User, apis: 
 
 
 @router.chosen_inline_result(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
-    F.result_id == Texts.MySchool.Inline.PROFILE.id,
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
+    F.result_id == Texts.Mes.Inline.PROFILE.id,
     F.inline_message_id.func(lambda IMI: IMI is not None)
 )
 @router.callback_query(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
-    F.data == Texts.MySchool.Inline.PROFILE.id
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
+    F.data == Texts.Mes.Inline.PROFILE.id
 )
 @handler()
 async def profile_load(update: ChosenInlineResult, bot: Bot, user: User, apis: APIs):
     from_db = ""
     try:
-        profile = await apis.mobile.get_profile(user.db_profile_id)
+        profile = await apis.mobile.get_family_profile(user.db_profile_id)
     except APIError:
         profile = FamilyProfile.model_validate(user.db_profile)
         from_db = Texts.FROM_DB
 
     await bot.edit_message_text(
-        text=profile_info(profile, from_db),
+        text=await profile_info(profile, from_db, apis, user),
         inline_message_id=update.inline_message_id
     )
 
 
 @router.chosen_inline_result(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
-    F.result_id == Texts.MySchool.Inline.HOMEWORKS_UPCOMING.id,
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
+    F.result_id == Texts.Mes.Inline.HOMEWORKS_UPCOMING.id,
     F.inline_message_id.func(lambda IMI: IMI is not None)
 )
 @router.callback_query(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
-    F.data == Texts.MySchool.Inline.HOMEWORKS_UPCOMING.id
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
+    F.data == Texts.Mes.Inline.HOMEWORKS_UPCOMING.id
 )
 @handler()
 async def homeworks_upcoming_load(update: ChosenInlineResult, bot: Bot, user: User, apis: APIs):
@@ -165,17 +166,17 @@ async def homeworks_upcoming_load(update: ChosenInlineResult, bot: Bot, user: Us
 
 
 @router.chosen_inline_result(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
-    F.result_id == Texts.MySchool.Inline.HOMEWORKS_PAST.id,
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
+    F.result_id == Texts.Mes.Inline.HOMEWORKS_PAST.id,
     F.inline_message_id.func(lambda IMI: IMI is not None)
 )
 @router.callback_query(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
-    F.data == Texts.MySchool.Inline.HOMEWORKS_PAST.id
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
+    F.data == Texts.Mes.Inline.HOMEWORKS_PAST.id
 )
 @handler()
 async def homeworks_past_load(update: ChosenInlineResult, bot: Bot, user: User, apis: APIs):
@@ -194,17 +195,17 @@ async def homeworks_past_load(update: ChosenInlineResult, bot: Bot, user: User, 
 
 
 @router.chosen_inline_result(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
-    F.result_id == Texts.MySchool.Inline.MARKS_BY_DATE.id,
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
+    F.result_id == Texts.Mes.Inline.MARKS_BY_DATE.id,
     F.inline_message_id.func(lambda IMI: IMI is not None)
 )
 @router.callback_query(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
-    F.data == Texts.MySchool.Inline.MARKS_BY_DATE.id
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
+    F.data == Texts.Mes.Inline.MARKS_BY_DATE.id
 )
 @handler()
 async def marks_by_date_load(update: ChosenInlineResult, bot: Bot, user: User, apis: APIs):
@@ -223,17 +224,17 @@ async def marks_by_date_load(update: ChosenInlineResult, bot: Bot, user: User, a
 
 
 @router.chosen_inline_result(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
-    F.result_id == Texts.MySchool.Inline.MARKS_BY_SUBJECT.id,
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
+    F.result_id == Texts.Mes.Inline.MARKS_BY_SUBJECT.id,
     F.inline_message_id.func(lambda IMI: IMI is not None)
 )
 @router.callback_query(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
-    F.data == Texts.MySchool.Inline.MARKS_BY_SUBJECT.id
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
+    F.data == Texts.Mes.Inline.MARKS_BY_SUBJECT.id
 )
 @handler()
 async def marks_by_subject_load(update: ChosenInlineResult, bot: Bot, user: User, apis: APIs):
@@ -253,17 +254,17 @@ async def marks_by_subject_load(update: ChosenInlineResult, bot: Bot, user: User
 
 
 @router.chosen_inline_result(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
-    F.result_id == Texts.MySchool.Inline.SETTINGS.id,
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
+    F.result_id == Texts.Mes.Inline.SETTINGS.id,
     F.inline_message_id.func(lambda IMI: IMI is not None)
 )
 @router.callback_query(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
-    F.data == Texts.MySchool.Inline.SETTINGS.id
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
+    F.data == Texts.Mes.Inline.SETTINGS.id
 )
 @handler()
 async def settings_load(update: ChosenInlineResult, bot: Bot, user: User, apis: APIs):
@@ -274,10 +275,47 @@ async def settings_load(update: ChosenInlineResult, bot: Bot, user: User, apis: 
     )
 
 
+@router.chosen_inline_result(
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
+    F.result_id == Texts.Mes.Inline.VISITS.id,
+    F.inline_message_id.func(lambda IMI: IMI is not None)
+)
+@router.callback_query(
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
+    F.data == Texts.Mes.Inline.VISITS.id
+)
+@handler()
+async def visits_load(update: ChosenInlineResult, bot: Bot, user: User, apis: APIs):
+    try:
+        today = date.today()
+        visits = await apis.mobile.get_visits(
+            profile_id=user.db_profile_id,
+            student_id=user.db_profile["children"][0]["id"],
+            contract_id=user.db_profile["children"][0]["contract_id"],
+            from_date=today - timedelta(days=14),
+            to_date=today,
+        )
+    except APIError as e:
+        await bot.edit_message_text(
+            Texts.API_ERROR(ERROR=e),
+            inline_message_id=update.inline_message_id
+        )
+        return
+
+    await bot.edit_message_text(
+        visits_info(visits),
+        inline_message_id=update.inline_message_id
+    )
+
+
 @router.inline_query(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser),
-    F.func(MySchool),
+    F.func(isMesUser),
+    F.func(MesUser),
+    F.func(Mes),
     F.query.strip().regexp(r"lesson (.*[0-9])").as_("match")
 )
 @handler()
@@ -315,22 +353,22 @@ async def lesson_info_inline_query(update: InlineQuery, match: Match):
 
 
 @router.chosen_inline_result(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
     F.result_id.regexp(r"lesson:(.*[0-9])").as_("match"),
     F.inline_message_id.func(lambda IMI: IMI is not None)
 )
 @router.callback_query(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
     F.data.regexp(r"lesson:(.*[0-9])").as_("match")
 )
 @handler()
 async def lesson_info_load(update: ChosenInlineResult, bot: Bot, user: User, apis: APIs, match: Match):
     try:
-        lesson = await apis.mobile.get_lesson_schedule_items(
+        lesson = await apis.mobile.get_schedule_item(
             profile_id=user.db_profile_id,
             student_id=user.db_profile["children"][0]["id"],
             lesson_id=match.group(1)

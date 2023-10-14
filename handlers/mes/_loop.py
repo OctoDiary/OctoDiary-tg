@@ -11,25 +11,25 @@ import jwt
 from aiogram import Bot, exceptions
 
 from database import Database
-from handlers.myschool.router import APIs, router as MySchoolRouter
-from handlers.myschool.scheduler import run_scheduler_for_chat
+from handlers.mes.router import APIs, router as MesRouter
+from handlers.mes.scheduler import run_scheduler_for_chat
 from loop import loop
-from octodiary.asyncApi.myschool import AsyncMobileAPI, AsyncWebAPI
+from octodiary.asyncApi.mes import AsyncMobileAPI
 from octodiary.exceptions import APIError
-from octodiary.types.myschool.mobile import EventsResponse, Notification
+from octodiary.types.mes.mobile import EventsResponse, Notification
 from utils.other import mark, pluralization_string
 from utils.texts import Texts
 
 db = Database()
 
 
-async def save_my_school_user_data(user_id):
+async def save_mes_user_data(user_id):
     user = db.user(str(user_id))
     
     try:
         api = AsyncMobileAPI(token=user.token)
-        profile_id = (await api.get_users_profile_info())[0].id
-        profile = await api.get_profile(profile_id)
+        profile_id = (await api.get_users_profiles_info())[0].id
+        profile = await api.get_family_profile(profile_id)
         today = date.today()
         events: EventsResponse = await api.get_events(
             person_id=profile.children[0].contingent_guid,
@@ -62,13 +62,13 @@ async def save_my_school_user_data(user_id):
         pass
 
 
-@MySchoolRouter.startup()
+@MesRouter.startup()
 @loop(600)
 async def save_users_data_loop(**kwargs):
     for func in [
-        save_my_school_user_data(user_id)
+        save_mes_user_data(user_id)
         for user_id in db.keys()
-        if user_id.isdigit() and db.get_key(user_id, "system", None) == "myschool"
+        if user_id.isdigit() and db.get_key(user_id, "system", None) == Texts.Systems.MES
     ]:
         await func
 
@@ -154,24 +154,24 @@ async def check_user_notifications(user_id, bot: Bot):
         user.db_skip_notifications = False
 
 
-@MySchoolRouter.startup()
+@MesRouter.startup()
 @loop(60 * 1.5)
 async def send_notications(bot: Bot, **kwargs):
     for func in [
-        check_user_notifications(user_id, bot)
+        asyncio.create_task(check_user_notifications(user_id, bot))
         for user_id in db.keys()
-        if user_id.isdigit() and db.get_key(user_id, "system", None) == Texts.Systems.MY_SCHOOL
+        if user_id.isdigit() and db.get_key(user_id, "system", None) == Texts.Systems.MES
     ]:
         await func
 
 
-@MySchoolRouter.startup()
+@MesRouter.startup()
 @loop(60)
 async def refresh_tokens(**kwargs):
     for user in {
         db.user(user_id)
         for user_id in db.keys()
-        if user_id.isdigit() and db.get_key(user_id, "system", None) == "myschool"
+        if user_id.isdigit() and db.get_key(user_id, "system", None) == Texts.Systems.MES
     }:
         await asyncio.sleep(1)
         exp = datetime.datetime.fromtimestamp(
@@ -179,16 +179,16 @@ async def refresh_tokens(**kwargs):
         )
         now = datetime.datetime.now()
         if (now.year, now.month, now.day, now.hour-1, now.minute) < (exp.year, exp.month, exp.day, exp.hour, exp.minute) > (now.year, now.month, now.day, now.hour, now.minute):
-            user.token = await AsyncWebAPI(token=user.token).refresh_token(0, 0)
+            user.token = await AsyncMobileAPI(token=user.token).refresh_token()
 
 
-@MySchoolRouter.startup()
+@MesRouter.startup()
 @loop(60 * 2.5)
 async def scheduler_loop(bot: Bot, **kwargs):
     for user in {
         db.user(user_id)
         for user_id in db.keys()
-        if user_id.isdigit() and db.get_key(user_id, "system", None) == "myschool"
+        if user_id.isdigit() and db.get_key(user_id, "system", None) == Texts.Systems.MES
     }:
         await asyncio.sleep(1)
         scheduler = user.db_scheduler

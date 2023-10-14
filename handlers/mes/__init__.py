@@ -3,11 +3,11 @@
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
 
-from handlers.myschool import _loop, homeworks, inline_query, marks, profile, schedule, scheduler, settings
-from handlers.myschool.router import router as MySchoolRouter
+from handlers.mes.router import router as MesRouter
+from . import _loop, homeworks, inline_query, marks, profile, schedule, scheduler, settings, visits
 
 __all__ = [
-    "MySchoolRouter",
+    "MesRouter",
     "_loop",
     "homeworks",
     "inline_query",
@@ -15,5 +15,6 @@ __all__ = [
     "profile",
     "schedule",
     "scheduler",
-    "settings"
+    "settings",
+    "visits"
 ]

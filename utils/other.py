@@ -69,6 +69,17 @@ def handler(fsm: bool = False):
                 Any: The result of the decorated function.
 
             """
+            # Skip func if there is no user or apis
+            func_params = inspect.signature(func).parameters
+            if (
+                "user" in func_params
+                and not kwargs.get("user")
+            ) or (
+                "apis" in func_params
+                and not kwargs.get("apis")
+            ):
+                return
+            
             # Check if the bot is closed in the database
             if Database().closed:
                 text = Texts.BOT_IS_CLOSED_MESSAGE
@@ -98,11 +109,12 @@ def handler(fsm: bool = False):
                 )
 
             try:
+                
                 # Call the decorated function
                 return await func(update, *args, **{
                     attr: value
                     for attr, value in kwargs.items()
-                    if attr in inspect.signature(func).parameters
+                    if attr in func_params
                 })
             except APIError as e:
                 if fsm:

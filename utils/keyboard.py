@@ -32,20 +32,53 @@ DEFAULT = ReplyKeyboardMarkup(keyboard=[
 ], resize_keyboard=True, selective=True)
 
 
+DEFAULT_MES = ReplyKeyboardMarkup(keyboard=[
+    [
+        KeyboardButton(text=Texts.Buttons.SCHEDULE),
+        KeyboardButton(text=Texts.Buttons.PROFILE)
+    ],
+    [
+        KeyboardButton(text=Texts.Buttons.HOMEWORKS_UPCOMING),
+        KeyboardButton(text=Texts.Buttons.HOMEWORKS_PAST)
+    ],
+    [
+        KeyboardButton(text=Texts.Buttons.MARKS_BY_DATE),
+        KeyboardButton(text=Texts.Buttons.MARKS_BY_SUBJECT)
+    ],
+    [
+        KeyboardButton(text=Texts.Buttons.VISITS),
+        KeyboardButton(text=Texts.Buttons.SETTINGS),
+    ],
+    [
+        KeyboardButton(text=Texts.Buttons.PROJECT_ABOUT)
+    ]
+], resize_keyboard=True, selective=True)
+
+
 AUTH_SYSTEMS = ReplyKeyboardMarkup(keyboard=[
     [
         KeyboardButton(text=Texts.MY_SCHOOL)
     ],
     [
-        KeyboardButton(text=Texts.MESH)
+        KeyboardButton(text=Texts.MES)
     ]
 ], resize_keyboard=True, selective=True)
 
 
-AUTH_LOGIN_TYPE = ReplyKeyboardMarkup(keyboard=[
+AUTH_LOGIN_TYPE_MY_SCHOOL = ReplyKeyboardMarkup(keyboard=[
     [
         KeyboardButton(text=Texts.Gosuslugi)
     ],
+    [
+        KeyboardButton(text=Texts.LoginAndPassword)
+    ],
+    [
+        KeyboardButton(text=Texts.AUPD_TOKEN)
+    ]
+], resize_keyboard=True, selective=True)
+
+
+AUTH_LOGIN_TYPE_MES = ReplyKeyboardMarkup(keyboard=[
     [
         KeyboardButton(text=Texts.LoginAndPassword)
     ],
@@ -66,7 +99,7 @@ YES_OR_NO = ReplyKeyboardMarkup(keyboard=[
 ABOUT = InlineKeyboardMarkup(inline_keyboard=[
     [
         InlineKeyboardButton(text=Texts.MY_SCHOOL, url=Texts.Buttons.MY_SCHOOL_URL),
-        InlineKeyboardButton(text=Texts.MESH, url=Texts.Buttons.MESH_URL)
+        InlineKeyboardButton(text=Texts.MES, url=Texts.Buttons.MES_URL)
     ],
     [
         InlineKeyboardButton(text="OctoDiary", url=Texts.Buttons.ORGANIZATION_URL),

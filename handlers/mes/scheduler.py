@@ -11,17 +11,17 @@ from aiogram.filters import Command
 from aiogram.types import Message
 
 from database import User
-from handlers.myschool.router import APIs, MySchool, MySchoolUser, isMySchoolUser, router
-from handlers.myschool.schedule import day_schedule_info
+from handlers.mes.router import APIs, Mes, MesUser, isMesUser, router
+from handlers.mes.schedule import day_schedule_info
 from octodiary.exceptions import APIError
 from utils.other import handler, sort_dict_by_date
 from utils.texts import Texts
 
 
 @router.message(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
     Command("enable_scheduler")
 )
 @handler()
@@ -69,9 +69,9 @@ async def enable_scheduler_cmd(message: Message, apis: APIs, user: User, bot: Bo
 
 
 @router.message(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool),
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes),
     Command("disable_scheduler")
 )
 @handler()

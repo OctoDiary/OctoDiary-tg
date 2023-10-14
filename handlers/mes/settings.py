@@ -11,7 +11,7 @@ from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 
 from database import User
-from handlers.myschool.router import APIs, MySchool, MySchoolUser, isMySchoolUser, router
+from handlers.mes.router import APIs, Mes, MesUser, isMesUser, router
 from utils.other import handler
 from utils.texts import Texts
 
@@ -50,15 +50,15 @@ def markup(user: User, apis: APIs, section: Optional[str] = None):
 
 
 @router.message(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
     Command("settings")
 )
 @router.message(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
     F.text == "Настройки",
     F.chat.type == ChatType.PRIVATE
 )

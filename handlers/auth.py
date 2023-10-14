@@ -19,13 +19,16 @@ from aiogram.types import (
 )
 
 from database import Database
-from handlers.myschool._loop import on_startup_myschool_router
-from octodiary.asyncApi.myschool import AsyncMobileAPI
+from handlers.myschool._loop import save_my_school_user_data
+from handlers.mes._loop import save_mes_user_data
+from octodiary.asyncApi.myschool import AsyncMobileAPI as MySchoolMobileAPI
+from octodiary.asyncApi.mes import AsyncMobileAPI as MESMobileAPI
 from octodiary.exceptions import APIError
 from octodiary.types.captcha import Captcha
+from octodiary.types.enter_sms_code import EnterSmsCode
 from utils.filters import AuthFilter
-from utils.keyboard import AUTH_LOGIN_TYPE, AUTH_SYSTEMS, DEFAULT, YES_OR_NO
-from utils.other import get_hash
+from utils.keyboard import AUTH_LOGIN_TYPE_MES, AUTH_LOGIN_TYPE_MY_SCHOOL, AUTH_SYSTEMS, DEFAULT, DEFAULT_MES, YES_OR_NO
+from utils.other import get_hash, pluralization_string
 from utils.texts import Texts
 
 auth_router = Router()
@@ -40,6 +43,7 @@ class Form(StatesGroup):
 
     gosuslugi_mfa = State()
     gosuslugi_captcha = State()
+    blitz_otp = State()
 
     confirm = State()
 
@@ -51,12 +55,21 @@ async def check_token_and_send_confirm(message: Message, token: str, state: FSMC
             Texts.Authorization.INVALID_ACCOUNT,
         )
         return
+    
+    data = await state.get_data()
 
-    api = AsyncMobileAPI(token=token)
     try:
-        user_api = await api.get_users_profile_info()
-        profile_id = user_api[0].id
-        profile = (await api.get_profile(profile_id)).profile
+        match data["system"]:
+            case Texts.Systems.MES:
+                api = MESMobileAPI(token=token)
+                user_api = await api.get_users_profiles_info()
+                profile_id = user_api[0].id
+                profile = (await api.get_family_profile(profile_id)).profile
+            case Texts.Systems.MY_SCHOOL:
+                api = MySchoolMobileAPI(token=token)
+                user_api = await api.get_users_profile_info()
+                profile_id = user_api[0].id
+                profile = (await api.get_profile(profile_id)).profile
 
         if profile.type == "student":
             type = Texts.Authorization.TYPE_STUDENT
@@ -102,20 +115,24 @@ async def auth(message: Message, state: FSMContext):
 @auth_router.message(Form.system, AuthFilter())
 async def set_system(message: Message, state: FSMContext):
     match message.text:
-        case Texts.MESH:
-            await state.clear()
-            await message.answer(
-                Texts.Authorization.NOT_SUPPORTED,
-                reply_markup=ReplyKeyboardRemove()
-            )
-        case Texts.MY_SCHOOL:
+        case Texts.MES:
             await state.update_data(
-                system=Texts.Systems.MY_SCHOOL if message.text == Texts.MY_SCHOOL else Texts.Systems.MESH
+                system=Texts.Systems.MES
             )
             await state.set_state(Form.auth_type)
             await message.answer(
                 Texts.Authorization.SELECT_LOGIN_TYPE,
-                reply_markup=AUTH_LOGIN_TYPE
+                reply_markup=AUTH_LOGIN_TYPE_MES
+            )
+            
+        case Texts.MY_SCHOOL:
+            await state.update_data(
+                system=Texts.Systems.MY_SCHOOL
+            )
+            await state.set_state(Form.auth_type)
+            await message.answer(
+                Texts.Authorization.SELECT_LOGIN_TYPE,
+                reply_markup=AUTH_LOGIN_TYPE_MY_SCHOOL
             )
 
 
@@ -126,13 +143,25 @@ async def set_login_type(message: Message, state: FSMContext):
             await state.update_data(login_type=Texts.LoginTypes.LoginAndPassword)
             await state.set_state(Form.username)
             await message.answer(
-                Texts.Authorization.MY_SCHOOL_ENTER_USERNAME(
+                (
+                    Texts.Authorization.MY_SCHOOL_ENTER_USERNAME
+                    if (await state.get_data()).get("system") == Texts.Systems.MY_SCHOOL
+                    else Texts.Authorization.MES_ENTER_USERNAME
+                )(
                     HASH=get_hash()
                 ),
                 disable_web_page_preview=True,
                 reply_markup=ReplyKeyboardRemove()
             )
         case Texts.Gosuslugi:
+            if (await state.get_data()).get("system") == Texts.Systems.MES:
+                await state.clear()
+                await message.answer(
+                    Texts.Authorization.NOT_SUPPORTED,
+                    reply_markup=ReplyKeyboardRemove()
+                )
+                return
+
             await state.update_data(login_type=Texts.LoginTypes.Gosuslugi)
             await state.set_state(Form.username)
             await message.answer(
@@ -166,6 +195,8 @@ async def set_username(message: Message, state: FSMContext):
             Texts.Authorization.GOSUSLUGI_ENTER_PASSWORD
             if data["login_type"] == Texts.LoginTypes.Gosuslugi
             else Texts.Authorization.MY_SCHOOL_ENTER_PASSWORD
+            if data["system"] == Texts.Systems.MY_SCHOOL
+            else Texts.Authorization.MES_ENTER_PASSWORD
         )(HASH=get_hash()),
         disable_web_page_preview=True
     )
@@ -248,73 +279,113 @@ async def set_password(message: Message, state: FSMContext, bot: Bot):
     await state.update_data(password=message.text)
     data = await state.get_data()
 
-    api = AsyncMobileAPI()
-    try:
-        response = (
-            await api.esia_login(username=data["username"], password=data["password"])
-            if data["login_type"] == Texts.LoginTypes.Gosuslugi
-            else await api.login(username=data["username"], password=data["password"])
-        )
-    except APIError as e:
-        if e.error_type in ["INVALID_PASSWORD", "authentication_error"]:
-            await state.update_data(username=None, password=None)
-            await state.set_state(Form.username)
-            await message.answer(
-                Texts.Authorization.INVALID_PASSWORD
-            )
-        else:
-            await state.clear()
-            raise e
-    else:
-        if isinstance(response, Captcha):
-            await state.update_data(api=api)
-            await state.update_data(captcha=response)
-            await state.set_state(Form.gosuslugi_captcha)
-            if response.question:
-                await message.answer(text=Texts.Authorization.RESOLVE_CAPTCHA)
-            else:
-                await message.answer_photo(
-                    photo=BufferedInputFile(response.image_bytes, Texts.Variables.CAPTCHA_IMAGE_FILENAME),
-                    caption=Texts.Authorization.ENTER_SYMBOLS_FROM_IMAGE,
-                    reply_markup=bot.inline.generate_markup(
-                        [
-                            [
-                                {
-                                    "text": Texts.Authorization.DIFFERENT_CODE,
-                                    "callback": renew_captcha,
-                                    "kwargs": {
-                                        "captcha": response,
-                                        "bot": bot
-                                    }
-                                }
-                            ],
-                            [
-                                {
-                                    "text": Texts.Authorization.RECORD_VOICE,
-                                    "callback": voice_captcha,
-                                    "kwargs": {
-                                        "captcha": response,
-                                        "bot": bot
-                                    }
-                                }
-                            ]
-                        ]
+    match data["system"]:
+        case Texts.Systems.MY_SCHOOL:
+            api = MySchoolMobileAPI()
+            try:
+                response = (
+                    await api.esia_login(username=data["username"], password=data["password"])
+                    if data["login_type"] == Texts.LoginTypes.Gosuslugi
+                    else await api.login(username=data["username"], password=data["password"])
+                )
+            except APIError as e:
+                if e.error_type in ["INVALID_PASSWORD", "authentication_error"]:
+                    await state.update_data(username=None, password=None)
+                    await state.set_state(Form.username)
+                    await message.answer(
+                        Texts.Authorization.INVALID_PASSWORD
                     )
-                )
-        elif response is False:
-            await state.update_data(api=api)
-            await state.set_state(Form.gosuslugi_mfa)
-            mfa_method = api._mfa_details["type"]
-            if mfa_method == "SMS":
-                phone = api._mfa_details["otp_details"]["phone"]
-                await message.answer(
-                    text=Texts.Authorization.MFA_ENTER_OTP(PHONE=phone),
-                    parse_mode="HTML"
-                )
+                else:
+                    await state.clear()
+                    raise e
             else:
-                await message.answer(text=Texts.Authorization.MFA_ENTER_TTP)
-        else:
-            await check_token_and_send_confirm(message, response, state)
+                if isinstance(response, Captcha):
+                    await state.update_data(api=api)
+                    await state.update_data(captcha=response)
+                    await state.set_state(Form.gosuslugi_captcha)
+                    if response.question:
+                        await message.answer(text=Texts.Authorization.RESOLVE_CAPTCHA)
+                    else:
+                        await message.answer_photo(
+                            photo=BufferedInputFile(response.image_bytes, Texts.Variables.CAPTCHA_IMAGE_FILENAME),
+                            caption=Texts.Authorization.ENTER_SYMBOLS_FROM_IMAGE,
+                            reply_markup=bot.inline.generate_markup(
+                                [
+                                    [
+                                        {
+                                            "text": Texts.Authorization.DIFFERENT_CODE,
+                                            "callback": renew_captcha,
+                                            "kwargs": {
+                                                "captcha": response,
+                                                "bot": bot
+                                            }
+                                        }
+                                    ],
+                                    [
+                                        {
+                                            "text": Texts.Authorization.RECORD_VOICE,
+                                            "callback": voice_captcha,
+                                            "kwargs": {
+                                                "captcha": response,
+                                                "bot": bot
+                                            }
+                                        }
+                                    ]
+                                ]
+                            )
+                        )
+                elif response is False:
+                    await state.update_data(api=api)
+                    await state.set_state(Form.gosuslugi_mfa)
+                    mfa_method = api._mfa_details["type"]
+                    if mfa_method == "SMS":
+                        phone = api._mfa_details["otp_details"]["phone"]
+                        await message.answer(
+                            text=Texts.Authorization.MFA_ENTER_OTP(PHONE=phone),
+                            parse_mode="HTML"
+                        )
+                    else:
+                        await message.answer(text=Texts.Authorization.MFA_ENTER_TTP)
+                else:
+                    await check_token_and_send_confirm(message, response, state)
+        case Texts.Systems.MES:
+            api = MESMobileAPI()
+            try:
+                response = await api.login(username=data["username"], password=data["password"])
+            except APIError as e:
+                match e.error_type:
+                    case "InvalidCredentials":
+                        await state.update_data(username=None, password=None)
+                        await state.set_state(Form.username)
+                        await message.answer(
+                            Texts.Authorization.INVALID_PASSWORD
+                        )
+                        return
+                    case "TemporarilyBlocked":
+                        await state.clear()
+                        await message.answer(
+                            text=Texts.Authorization.TEMPORARY_BLOCKED
+                        )
+                        return
+                    case "NotFound":
+                        await state.clear()
+                        await message.answer(
+                            text=Texts.Authorization.NOT_FOUND
+                        )
+                        return
+                    case _:
+                        raise e
+            else:
+                if isinstance(response, EnterSmsCode):
+                    await state.update_data(api=api, enter_code=response)
+                    await state.set_state(Form.blitz_otp)
+                    phone = "+" + response.contact[0:4] + "*****" + response.contact[-2:]
+                    await message.answer(
+                        text=Texts.Authorization.BLITZ_SEND_CODE(PHONE=phone),
+                        parse_mode="HTML"
+                    )
+                else:
+                    await check_token_and_send_confirm(message, response, state)
 
 
 @auth_router.message(Form.gosuslugi_mfa)
@@ -325,7 +396,7 @@ async def set_gosuslugi_mfa(message: Message, state: FSMContext, bot: Bot):
 
     data = await state.get_data()
     try:
-        api: AsyncMobileAPI = data["api"]
+        api: MySchoolMobileAPI = data["api"]
         response = await api.esia_enter_MFA(code=int(message.text))
     except APIError as e:
         if e.error_type in ["INVALID_TTP", "INVALID_OTP"]:
@@ -444,6 +515,35 @@ async def asnwer_gosuslugi_captcha(message: Message, state: FSMContext, bot: Bot
             await check_token_and_send_confirm(message, response, state)
 
 
+@auth_router.message(Form.blitz_otp)
+async def set_blitz_otp(message: Message, state: FSMContext, bot: Bot):
+    if not message.text.isdigit() or len(message.text) != 6:
+        await message.answer(text=Texts.Authorization.INVALID_MFA_ENTER_AGAIN)
+        return
+    
+    data = await state.get_data()
+    enter_code: EnterSmsCode = data["enter_code"]
+
+    try:
+        response = await enter_code.async_enter_code(message.text)
+    except APIError as e:
+        match e.error_type:
+            case "InvalidOTP":
+                await message.answer(text=Texts.Authorization.BLITZ_INVALID_CODE(
+                    ATTEMPTS=pluralization_string(e.details["remain_attempts"], ["попытка", "попытки", "попыток"]),
+                    TTL=pluralization_string(e.details["ttl"], ["секунда", "секунды", "секунд"])
+                ))
+            case "NoAttempts" | "CodeExpired":
+                await message.answer(text=Texts.Authorization.BLITZ_CODE_EXPIRED)
+            case _:
+                await state.clear()
+                await message.answer(text=Texts.Authorization.ERROR_TRY_AGAIN(ERROR=str(e)))
+                raise e
+    else:
+        print(response)
+        await check_token_and_send_confirm(message, response, state)
+
+
 @auth_router.message(Form.confirm)
 async def confirm(message: Message, state: FSMContext):
     match message.text:
@@ -477,14 +577,22 @@ async def confirm(message: Message, state: FSMContext):
             }
             user.db_skip_notifications = True
             user.db_notified_ids = []
-            await on_startup_myschool_router()
+            
+            if data["system"] == Texts.Systems.MY_SCHOOL:
+                await save_my_school_user_data(str(message.from_user.id))
+            else:
+                await save_mes_user_data(str(message.from_user.id))
 
             await state.clear()
 
             await message.answer(
                 text=Texts.Authorization.SUCCESS_CONFIRM,
                 reply_markup=(
-                    DEFAULT
+                    (
+                        DEFAULT
+                        if data["system"] == Texts.Systems.MY_SCHOOL
+                        else DEFAULT_MES
+                    )
                     if message.chat.type == ChatType.PRIVATE
                     else None
                 )

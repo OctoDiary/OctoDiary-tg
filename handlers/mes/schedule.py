@@ -11,12 +11,12 @@ from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
 
 from database import User
-from handlers.myschool.router import APIs, MySchool, MySchoolUser, isMySchoolUser, router
+from handlers.mes.router import APIs, Mes, MesUser, isMesUser, router
 from octodiary.exceptions import APIError
-from octodiary.types.myschool.mobile import EventsResponse
-from octodiary.types.myschool.mobile.lesson_schedule_items import (
+from octodiary.types.mes.mobile import EventsResponse
+from octodiary.types.mes.mobile.lesson_schedule_item import (
     LessonHomework,
-    LessonScheduleItems,
+    LessonScheduleItem,
     Mark,
 )
 from utils.other import handler, pluralization_string, sort_dict_by_date
@@ -29,7 +29,7 @@ def day_schedule_info(events: EventsResponse, from_db, *, inline: bool = False, 
     def weekday(x):
         return {0: "понедельник", 1: "вторник", 2: "среду", 3: "четверг", 4: "пятницу", 5: "субботу", 6: "воскресенье"}[int(x)]
 
-    available_EC: dict[str, bool] = {}
+    available_other_source: dict[str, bool] = {}
 
     for event in events.response:
 
@@ -45,8 +45,12 @@ def day_schedule_info(events: EventsResponse, from_db, *, inline: bool = False, 
         lesson_info = f"[ <b>ID</b>: <code>{event.id}</code> ]"
 
         if event.source == "EC":
-            available_EC[date_str] = True
+            available_other_source[date_str] = True
             lesson_info = "[ <b>ВД*</b> ]"
+        elif event.source == "AE":
+            available_other_source[date_str] = True
+            lesson_info = "[ <b>ДО*</b> ]"
+
 
         homeworks = [
             homework.replace("\n", "</code>; <code>")
@@ -88,8 +92,8 @@ def day_schedule_info(events: EventsResponse, from_db, *, inline: bool = False, 
         ) + "\n".join(lessons) + Texts.LESSON_INFO_DETAIL(
             PREFIX="/" if not inline else "@OctoDiaryBot "
         ) + (
-            Texts.MySchool.LESSON_DESIGNATIONS
-            if available_EC.get(date_str, False)
+            Texts.Mes.LESSON_DESIGNATIONS
+            if available_other_source.get(date_str, False)
             else ""
         )
         for date_str, lessons in days_lessons.items()
@@ -124,7 +128,7 @@ def homework_info(homework: LessonHomework) -> str:
     )
 
 
-def lesson_info(lesson: LessonScheduleItems) -> str:
+def lesson_info(lesson: LessonScheduleItem) -> str:
     return Texts.LESSON_INFO(lesson=lesson) + (
         (
             Texts.LESSON_INFO_DETAILS.MARKS + (
@@ -141,15 +145,15 @@ def lesson_info(lesson: LessonScheduleItems) -> str:
 
 
 @router.message(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
     Command("schedule")
 )
 @router.message(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
     F.text == Texts.Buttons.SCHEDULE,
     F.chat.type == ChatType.PRIVATE
 )
@@ -181,15 +185,15 @@ async def schedule(message: Message, apis: APIs, user: User):
 
 
 @router.message(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
+    F.func(isMesUser),
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
     Command("lesson")
 )
 @handler()
 async def get_lesson_info(message: Message, apis: APIs, user: User, command: CommandObject):
     """Получить информацию o6 уроке"""
-    lesson = await apis.mobile.get_lesson_schedule_items(
+    lesson = await apis.mobile.get_schedule_item(
         profile_id=user.db_profile_id,
         student_id=user.db_profile["children"][0]["id"],
         lesson_id=command.args.strip()

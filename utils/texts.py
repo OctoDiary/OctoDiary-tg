@@ -20,8 +20,10 @@ class TextsSection(dict):
         item = self[__name]
         if isinstance(item, dict):
             return TextsSection(**item)
-        else:
+        elif isinstance(item, str):
             return Text(item)
+        else:
+            return item
 
 
 class AllTexts:
@@ -38,7 +40,9 @@ class AllTexts:
         item = self._texts[__name]
         if isinstance(item, dict):
             return TextsSection(**item)
-        else:
+        elif isinstance(item, str):
             return Text(item)
+        else:
+            return item
 
 Texts = AllTexts()

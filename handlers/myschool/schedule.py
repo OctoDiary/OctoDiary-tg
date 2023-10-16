@@ -43,6 +43,10 @@ def day_schedule_info(events: EventsResponse, from_db, *, inline: bool = False, 
             days_lessons[date_str] = []
 
         lesson_info = f"[ <b>ID</b>: <code>{event.id}</code> ]"
+        
+        
+        if not date_str in available_other_source:
+            available_other_source[date_str] = []
 
         if event.source == "EC":
             available_other_source[date_str] += ["EC"]

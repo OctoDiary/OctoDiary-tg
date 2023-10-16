@@ -96,7 +96,7 @@ def generate_text_notification(notif: Notification):
                 ),
                 IS_EXAM_EMOJI="❗️" if notif.new_is_exam else ""
             )
-            text += Texts.Notifications.Mark.LESSON_TIME(
+            text += Texts.Notifications.Mark.LESSON_DATE(
                 TIME=str(notif.lesson_date)
             )
             text += Texts.Notifications.Mark.HASHTAGS(

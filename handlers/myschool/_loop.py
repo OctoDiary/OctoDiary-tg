@@ -68,7 +68,7 @@ async def save_users_data_loop(**kwargs):
     for func in [
         save_my_school_user_data(user_id)
         for user_id in db.keys()
-        if user_id.isdigit() and db.get_key(user_id, "system", None) == "myschool"
+        if user_id.isdigit() and db.get_key(user_id, "system", None) == Texts.Systems.MY_SCHOOL
     ]:
         await func
 
@@ -96,7 +96,7 @@ def generate_text_notification(notif: Notification):
                 ),
                 IS_EXAM_EMOJI="❗️" if notif.new_is_exam else ""
             )
-            text += Texts.Notifications.Mark.LESSON_TIME(
+            text += Texts.Notifications.Mark.LESSON_DATE(
                 TIME=str(notif.lesson_date)
             )
             text += Texts.Notifications.Mark.HASHTAGS(
@@ -171,7 +171,7 @@ async def refresh_tokens(**kwargs):
     for user in {
         db.user(user_id)
         for user_id in db.keys()
-        if user_id.isdigit() and db.get_key(user_id, "system", None) == "myschool"
+        if user_id.isdigit() and db.get_key(user_id, "system", None) == Texts.Systems.MY_SCHOOL
     }:
         await asyncio.sleep(1)
         exp = datetime.datetime.fromtimestamp(
@@ -188,7 +188,7 @@ async def scheduler_loop(bot: Bot, **kwargs):
     for user in {
         db.user(user_id)
         for user_id in db.keys()
-        if user_id.isdigit() and db.get_key(user_id, "system", None) == "myschool"
+        if user_id.isdigit() and db.get_key(user_id, "system", None) == Texts.Systems.MY_SCHOOL
     }:
         await asyncio.sleep(1)
         scheduler = user.db_scheduler

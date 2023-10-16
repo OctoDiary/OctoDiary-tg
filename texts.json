@@ -139,11 +139,16 @@
     "HOMEWORK_INFO": "┌ <b>Задание</b>: <code>{HOMEWORK}</code>\n└ <b>Прикреплённые файлы: {UPLOADED_FILES}</b>",
     "SETTINGS": "⚙️ <b>Настройки</b>\n• <b>Цели</b> - покажут, сколько осталось оценок до желаемого среднего балла\n• <b>Уведомления</b> - включить / отключить уведомления определенных событий",
     "SETTINGS_NOTIFICATIONS": "⚙️ <b>Настройки</b> [<code>Уведомления</code>]\n\n• <b>Оценки</b> - уведомления о новых оценках (или об изменении какой-либо оценки)",
-    "LESSON_INFO_DETAIL": "\n\n<b>Подробная информация</b> o6 уроке: <code>{PREFIX}lesson ID</code>\n",
+    "LESSON_INFO_DETAIL": "\n\n<b>Подробное инфо</b> o6 уроке: <code>{PREFIX}lesson ID</code>\n",
+    "LESSON_DESIGNATIONS": "<b>Обозначения</b>:",
+    "DESIGNATIONS": {
+        "EC": "\n• <i>ВД* - Внеурочная Деятельность</i>",
+        "AE": "\n• <i>ДО* - Доп. образование</i>",
+        "ORGANIZER": "\n• <i>ЭКС* - Экскурсия</i>"
+    },
     "MySchool": {
         "CHILD_INFO": "\n┌ 👤 <b>{child.last_name} {child.first_name} {child.middle_name}</b>\n├ 📞 <code>{child.phone or 'Нет информации'}</code>\n├ 📆 <code>{child.birth_date}</code>\n└ 📧 <code>{child.email}</code>\n",
         "PROFILE_INFO": "👤 <b>Профиль</b>\n{from_db}<b>{profile.profile.first_name} {profile.profile.last_name}</b> [<b>{PROFILE_TYPE}</b>]\n[<b>Личные данные</b> | <b>Контакты</b>]\n┌ 👤 <b>{profile.profile.last_name} {profile.profile.first_name} {profile.profile.middle_name}</b>\n├ 📞 <code>{PHONE}</code>\n├ 📆 <code>{BIRTH_DATE}</code>\n└ 📧 <code>{EMAIL}</code>\n",
-        "LESSON_DESIGNATIONS": "<b>Обозначения</b>:\n• <i>ВД* - Внеурочная Деятельность</i>",
         "Inline": {
             "SCHEDULE": {
                 "id": "schedule",
@@ -228,7 +233,6 @@
             "EMAIL": "\n├ 📧 <b>E-mail</b>: <code>{EMAIL}</code>",
             "BIRTH_DATE": "\n└ 📆 <b>День рождения</b>: <code>{BIRTH_DATE}</code>"
         },
-        "LESSON_DESIGNATIONS": "<b>Обозначения</b>:\n• <i>ВД* - Внеурочная Деятельность</i>\n• <i>ДО* - Доп. образование</i>",
         "Inline": {
             "SCHEDULE": {
                 "id": "schedule",

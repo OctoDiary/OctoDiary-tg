@@ -29,7 +29,7 @@ def day_schedule_info(events: EventsResponse, from_db, *, inline: bool = False, 
     def weekday(x):
         return {0: "понедельник", 1: "вторник", 2: "среду", 3: "четверг", 4: "пятницу", 5: "субботу", 6: "воскресенье"}[int(x)]
 
-    available_EC: dict[str, bool] = {}
+    available_other_source: dict[str, list[str]] = {}
 
     for event in events.response:
 
@@ -45,8 +45,15 @@ def day_schedule_info(events: EventsResponse, from_db, *, inline: bool = False, 
         lesson_info = f"[ <b>ID</b>: <code>{event.id}</code> ]"
 
         if event.source == "EC":
-            available_EC[date_str] = True
+            available_other_source[date_str] += ["EC"]
             lesson_info = "[ <b>ВД*</b> ]"
+        elif event.source == "AE":
+            available_other_source[date_str] += ["AE"]
+            lesson_info = "[ <b>ДО*</b> ]"
+        elif event.source == "ORGANIZER":
+            available_other_source[date_str] += ["ORGANIZER"]
+            lesson_info = "[ <b>ЭКС*</b> ]"
+
 
         homeworks = [
             homework.replace("\n", "</code>; <code>")
@@ -88,8 +95,15 @@ def day_schedule_info(events: EventsResponse, from_db, *, inline: bool = False, 
         ) + "\n".join(lessons) + Texts.LESSON_INFO_DETAIL(
             PREFIX="/" if not inline else "@OctoDiaryBot "
         ) + (
-            Texts.MySchool.LESSON_DESIGNATIONS
-            if available_EC.get(date_str, False)
+            Texts.LESSON_DESIGNATIONS + "".join([
+                getattr(Texts.DESIGNATIONS, event_type)
+                for event_type in event_types
+            ])
+            if (
+                event_types := list(set(
+                    available_other_source.get(date_str, [])
+                ))
+            )
             else ""
         )
         for date_str, lessons in days_lessons.items()

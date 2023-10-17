@@ -142,7 +142,19 @@ def homework_info(homework: LessonHomework) -> str:
 
 
 def lesson_info(lesson: LessonScheduleItem) -> str:
-    return Texts.LESSON_INFO(lesson=lesson) + (
+    return Texts.LESSON_INFO(lesson=lesson, topic=lesson.details.lesson_topic.strip() or "❌") + (
+        (
+            Texts.LESSON_INFO_DETAILS.THEMES + (
+                "\n".join([
+                    Texts.THEME_FRAME(
+                        theme=theme.title
+                    )
+                    for theme in lesson.details.theme.theme_frames
+                    if theme.title
+                ])
+            )
+        ) if lesson.details and lesson.details.theme.theme_frames else ""
+    ) + (
         (
             Texts.LESSON_INFO_DETAILS.MARKS + (
                 "\n".join([mark_info(mark) for mark in lesson.marks])

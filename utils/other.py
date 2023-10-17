@@ -254,7 +254,6 @@ def mark(value: str, weight: int) -> str:
 def get_hash():
     try:
         hash_ = Repo().head.commit.hexsha
-        version = Repo().head.commit.message.splitlines()[0]
-        return f'<a href="https://github.com/OctoDiary/OctoDiary-tg/commit/{hash_}">#{hash_[:7]} (<b>{version}</b>)</a>'
+        return f'<a href="https://github.com/OctoDiary/OctoDiary-tg/commit/{hash_}">#{hash_[:7]}</a>'
     except Exception:
         return "<a href='https://github.com/OctoDiary/OctoDiary-tg'>#last-commit</a>"

@@ -8,6 +8,7 @@ from datetime import date, timedelta
 from aiogram import F
 from aiogram.filters import Command
 from aiogram.types import Message
+from aiogram.enums import ChatType
 
 from database import User
 from handlers.mes.router import APIs, Mes, MesUser, isMesUser, router
@@ -36,6 +37,13 @@ def visits_info(visits: Visits) -> str:
     Command("visits"),
     F.func(MesUser).as_("user"),
     F.func(Mes).as_("apis"),
+)
+@router.message(
+    F.func(isMesUser),
+    F.text == "Посещение",
+    F.func(MesUser).as_("user"),
+    F.func(Mes).as_("apis"),
+    F.chat.type == ChatType.PRIVATE
 )
 @handler()
 async def visits_cmd(update: Message, apis: APIs, user: User):

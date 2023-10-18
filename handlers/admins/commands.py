@@ -31,6 +31,10 @@ async def open(message: Message):
 async def statistics(message: Message):
     db = Database()
     await message.answer(text=Texts.Admin.STATISTICS(
-        ALL_USERS_COUNT=len(db.settings.get("users", [])),
+        ALL_USERS_COUNT=len([
+            user_id
+            for user_id in db.keys()
+            if user_id.isdigit() and db.user(user_id).system
+        ]),
         NEW_USERS_IN_THIS_MONTH=Database().settings.get(f"new-users-month:{date.today().month}", 0),
     ))

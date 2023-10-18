@@ -304,7 +304,7 @@ async def set_password(message: Message, state: FSMContext, bot: Bot):
                     await state.update_data(captcha=response)
                     await state.set_state(Form.gosuslugi_captcha)
                     if response.question:
-                        await message.answer(text=Texts.Authorization.RESOLVE_CAPTCHA)
+                        await message.answer(text=Texts.Authorization.RESOLVE_CAPTCHA(QUESTION=response.question))
                     else:
                         await message.answer_photo(
                             photo=BufferedInputFile(response.image_bytes, Texts.Variables.CAPTCHA_IMAGE_FILENAME),
@@ -410,7 +410,7 @@ async def set_gosuslugi_mfa(message: Message, state: FSMContext, bot: Bot):
             await state.update_data(captcha=response)
             await state.set_state(Form.gosuslugi_captcha)
             if response.question:
-                await message.answer(text=Texts.Authorization.RESOLVE_CAPTCHA)
+                await message.answer(text=Texts.Authorization.RESOLVE_CAPTCHA(QUESTION=response.question))
             else:
                 await message.answer_photo(
                     photo=BufferedInputFile(response.image_bytes, Texts.Variables.CAPTCHA_IMAGE_FILENAME),
@@ -469,7 +469,7 @@ async def asnwer_gosuslugi_captcha(message: Message, state: FSMContext, bot: Bot
         if isinstance(response, Captcha):
             await state.update_data(captcha=response)
             if response.question:
-                await message.answer(text=Texts.Authorization.RESOLVE_CAPTCHA)
+                await message.answer(text=Texts.Authorization.RESOLVE_CAPTCHA(QUESTION=response.question))
             else:
                 await message.answer_photo(
                     photo=BufferedInputFile(response.image_bytes, Texts.Variables.CAPTCHA_IMAGE_FILENAME),

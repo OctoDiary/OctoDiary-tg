@@ -8,7 +8,7 @@ import contextlib
 from datetime import date
 
 from aiogram import F
-from aiogram.filters import KICKED, ChatMemberUpdatedFilter, Command
+from aiogram.filters import KICKED, MEMBER, ChatMemberUpdatedFilter, Command
 from aiogram.types import Message
 
 from database import Database
@@ -48,6 +48,13 @@ async def statistics(message: Message):
 @AdminRouter.my_chat_member(ChatMemberUpdatedFilter(member_status_changed=KICKED))
 async def user_blocked_bot(message: Message):
     db.blocked_users = [*db.blocked_users, str(message.from_user.id)]
+
+
+@AdminRouter.my_chat_member(ChatMemberUpdatedFilter(member_status_changed=MEMBER))
+async def user_unblocked_bot(message: Message):
+    blocked_users = db.blocked_users
+    blocked_users.remove(message.from_user.id)
+    db.blocked_users = blocked_users
 
 
 @AdminRouter.message(Command("notify"), AdminFilter)

@@ -3,6 +3,8 @@
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
 
+import asyncio
+import contextlib
 from datetime import date
 
 from aiogram import F
@@ -11,6 +13,7 @@ from aiogram.types import Message
 
 from database import Database
 from handlers.admins.router import AdminRouter
+from utils.other import pluralization_string
 from utils.texts import Texts
 
 AdminFilter = F.func(lambda message: message.from_user.id in Database().admins)
@@ -45,3 +48,35 @@ async def statistics(message: Message):
 @AdminRouter.my_chat_member(ChatMemberUpdatedFilter(member_status_changed=KICKED))
 async def user_blocked_bot(message: Message):
     db.blocked_users = [*db.blocked_users, str(message.from_user.id)]
+
+
+@AdminRouter.message(Command("notify"), AdminFilter)
+async def notify(message: Message):
+    if not message.reply_to_message:
+        await message.answer(text=Texts.Admin.NOTIFY_NO_REPLY)
+        return
+
+    _message = await message.answer(
+        text=Texts.Admin.NOTIFY_SENDING
+    )
+
+    notification_message = message.reply_to_message
+    successfully_sent = 0
+    for user in [
+        int(user_id)
+        for user_id in db.keys()
+        if user_id.isdigit() and db.user(user_id).system and int(user_id) not in db.blocked_users
+    ]:
+        await asyncio.sleep(3)
+        with contextlib.suppress(Exception):
+            await notification_message.copy_to(user)
+            successfully_sent += 1
+
+    await _message.edit_text(
+        text=Texts.Admin.NOTIFY_SUCCESS.format(
+            successfully_sent=pluralization_string(
+                successfully_sent,
+                ["польвателю", "пользователям", "пользователям"]
+            )
+        )
+    )

@@ -117,3 +117,7 @@ class Database(LightDB):
     @admins.setter
     def admins(self, value: list[str]) -> None:
         self.settings.set("admins", value)
+    
+    @property
+    def blocked_users(self) -> list[int]:
+        return self.settings.get("blocked-users", [])

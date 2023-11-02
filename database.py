@@ -24,6 +24,30 @@ class User:
     def pop(self, key: str) -> Any:
         return self.__db.pop_key(self.__id, key)
 
+    def pop_key(self, attr: str, key: str, default: Any = None) -> Any:
+        attr_value = self.__db.get_key(self.__id, attr)
+        if attr_value is None:
+            return None
+        value = attr_value.pop(key, default)
+        self.__db.set_key(self.__id, attr, attr_value)
+        return value
+
+    def set_key(self, attr: str, key: str, value: Any) -> None:
+        attr_value = self.__db.get_key(self.__id, attr)
+        if attr_value is None:
+            attr_value = {}
+        attr_value[key] = value
+        self.__db.set_key(self.__id, attr, attr_value)
+
+    def get_key(self, attr: str, key: str, default: Any = None) -> Any:
+        attr_value = self.__db.get_key(self.__id, attr)
+        if attr_value is None:
+            return default
+        return attr_value.get(key, default)
+
+    def save(self):
+        self.__db.save()
+
     @property
     def token(self) -> str:
         return self.get("token")

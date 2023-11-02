@@ -96,7 +96,7 @@ async def disable_scheduler_cmd(message: Message, user: User):
         )
         return
 
-    del user.db_scheduler[str(message.chat.id)]
+    user.pop_key("scheduler", str(message.chat.id))
 
     await message.answer(
         Texts.SCHEDULER_DISABLED
@@ -166,7 +166,7 @@ async def run_scheduler_for_chat(
                         **scheduler_info.get("weeks_messages", {})[str(index)]
                     )
                 )
-                if first_start or str(index) in scheduler_info.get("weeks_messages", {})
+                if str(index) in scheduler_info.get("weeks_messages", {}) and not first_start
                 else (
                     await bot.get_chat(chat_id=int(chat_id))
                 )
@@ -190,7 +190,7 @@ async def run_scheduler_for_chat(
                         else {
                             "reply_to_message_id": scheduler_info["message_reply_id"],
                         }
-                    ) if first_start else {}
+                    ) if str(index) not in scheduler_info.get("weeks_messages", {}) or first_start else {}
                 )
             )
         )

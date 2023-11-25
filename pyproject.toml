@@ -1,3 +1,20 @@
+
+[tool.poetry]
+name = "octodiary-tg"
+version = "0.1.5"
+description = "Telegram бот для использования МЭШ или Моей Школы МО."
+authors = ["Den4ikSuperOstryyPer4ik <main@dsop.online>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.black]
 target-version = ["py39"]
 line-length = 120
@@ -34,27 +51,18 @@ select = [
   "YTT",
 ]
 ignore = [
-  # Allow non-abstract empty methods in abstract base classes
   "B027",
-  # Allow boolean positional values in function calls, like `dict.get(... True)`
   "FBT003",
-  # Ignore checks for possible passwords
   "S105", "S106", "S107",
-  # Ignore complexity
   "C901", "PLR0911", "PLR0912", "PLR0913", "PLR0915",
-  # Ignore built-in names
   "A003", "A002",
-
   "PLR2004",
-  # Don't touch ambiguous-unicode-character (replacing cyryllic letters)
   "RUF001",
   "RUF002",
   "RUF003",
 ]
 unfixable = [
-  # Don't touch unused imports
   "F401",
-  # Don't touch ambiguous-unicode-character (replacing cyryllic letters)
   "RUF001",
   "RUF002",
   "RUF003",

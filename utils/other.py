@@ -21,7 +21,7 @@ from octodiary.exceptions import APIError
 from utils.texts import Texts
 
 
-def handler(fsm: bool = False):
+def handler(*, fsm: bool = False):
     """
     Decorator that handles API calls and database checks.
 
@@ -37,14 +37,10 @@ def handler(fsm: bool = False):
         Wrapper function that handles API calls and database checks.
 
         Args:
-            update (Union[types.Message, types.CallbackQuery, types.InlineQuery, types.ChosenInlineResult]): 
-                The update object received from the bot.
-            *args: Additional positional arguments.
-            **kwargs: Additional keyword arguments.
+            func: The function to be decorated.
 
         Returns:
             Any: The result of the decorated function.
-
         """
         async def wrapper(
             update: Union[
@@ -60,7 +56,7 @@ def handler(fsm: bool = False):
             Wrapper function that handles API calls and database checks.
 
             Args:
-                update (Union[types.Message, types.CallbackQuery, types.InlineQuery, types.ChosenInlineResult]): 
+                update (Union[types.Message, types.CallbackQuery, types.InlineQuery, types.ChosenInlineResult]):
                     The update object received from the bot.
                 *args: Additional positional arguments.
                 **kwargs: Additional keyword arguments.
@@ -79,7 +75,7 @@ def handler(fsm: bool = False):
                 and not kwargs.get("apis")
             ):
                 return
-            
+
             # Check if the bot is closed in the database
             if Database().closed:
                 text = Texts.BOT_IS_CLOSED_MESSAGE
@@ -109,7 +105,7 @@ def handler(fsm: bool = False):
                 )
 
             try:
-                
+
                 # Call the decorated function
                 return await func(update, *args, **{
                     attr: value
@@ -160,6 +156,7 @@ def pluralization_string(number: int, words: list[str]):
         str: The pluralized string based on the given number.
 
     Examples:
+        >>> num = 5
         >>> pluralization_string(num, ["жизнь", "жизни", "жизней"])
         >>> pluralization_string(num, ["рубль", "рубля", "рублей"])
         >>> pluralization_string(num, ["ручка", "ручки", "ручек"])
@@ -201,7 +198,8 @@ def sort_dict_by_date(dictionary: dict[str, Any], reverse: bool = False, separat
         The sorted dictionary.
 
     Example:
-        >>> sort_dict_by_date({"19.09": ..., "10.09": ..., "02.08": ..., "25.12": ...})
+        >>> data = {"19.09": ..., "10.09": ..., "02.08": ..., "25.12": ...}
+        >>> sort_dict_by_date(data)
         {'02.08': ..., '10.09': ..., '19.09': ..., '25.12': ...}
     """
     today = date.today()

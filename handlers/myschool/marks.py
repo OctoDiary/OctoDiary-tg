@@ -112,7 +112,7 @@ def marks_sorted_by_subject_info(marks_short: ShortSubjectMarks, goals: bool = F
 )
 @handler()
 async def marks_by_date(message: Message, apis: APIs, user: User):
-    """Оценки : По дате"""
+    """Marks users by date."""
 
     marks = await apis.mobile.get_marks(
         student_id=user.db_profile["children"][0]["id"],
@@ -143,7 +143,7 @@ async def marks_by_date(message: Message, apis: APIs, user: User):
 )
 @handler()
 async def marks_by_subject(message: Message, apis: APIs, user: User):
-    """Оценки : По предмету"""
+    """Marks users by subject."""
 
     marks = await apis.mobile.get_subject_marks_short(
         student_id=user.db_profile["children"][0]["id"],

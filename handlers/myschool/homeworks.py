@@ -57,7 +57,7 @@ def homeworks_info(homeworks: ShortHomeworks):
 )
 @handler()
 async def homeworks_upcoming(message: Message, apis: APIs, user: User):
-    """Домашние задания (ДЗ) : Ближайшее"""
+    """Homeworks upcoming"""
 
     homeworks = await apis.mobile.get_homeworks_short(
         student_id=user.db_profile["children"][0]["id"],
@@ -88,7 +88,7 @@ async def homeworks_upcoming(message: Message, apis: APIs, user: User):
 )
 @handler()
 async def homeworks_past(message: Message, apis: APIs, user: User):
-    """Домашние задания (ДЗ) : Прошедшее"""
+    """Homeworks past"""
 
     homeworks = await apis.mobile.get_homeworks_short(
         student_id=user.db_profile["children"][0]["id"],

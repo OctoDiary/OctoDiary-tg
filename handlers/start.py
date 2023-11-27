@@ -18,22 +18,23 @@ router = Router(name="Start")
 
 @router.message(CommandStart())
 async def start(message: Message):
+    user = Database().user(message.from_user.id)
     await message.answer(
         text=(
             Texts.START(USER_FULL_NAME=message.from_user.full_name)
         ) + (
             Texts.START_GO_AUTH
-            if not Database().user(message.from_user.id).token
+            if not user.token
             else ""
         ),
         reply_markup=(
             (
                 DEFAULT
-                if Database().user(message.from_user.id).system == Texts.Systems.MY_SCHOOL
+                if user.system == Texts.Systems.MY_SCHOOL
                 else DEFAULT_MES
             )
             if message.chat.type == ChatType.PRIVATE
-            and Database().user(message.from_user.id).token
+            and user.token
             else None
         )
     )

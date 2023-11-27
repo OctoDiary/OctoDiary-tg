@@ -19,32 +19,34 @@ class APIs:
 
 
 def MySchool(
-    update: Message | CallbackQuery | InlineQuery | ChosenInlineResult
+        update: Message | CallbackQuery | InlineQuery | ChosenInlineResult
 ) -> APIs | bool:
     if (
-        user.system == "myschool" and bool(user.token)
-        if update.from_user and (user := Database().user(update.from_user.id))
-        else False
+            user.system == "myschool" and bool(user.token)
+            if update.from_user and (user := Database().user(update.from_user.id))
+            else False
     ):
         return APIs(user.token)
     return False
 
+
 def MySchoolUser(
-    update: Message | CallbackQuery | InlineQuery | ChosenInlineResult
+        update: Message | CallbackQuery | InlineQuery | ChosenInlineResult
 ) -> User | bool:
     return (
         user
         if update.from_user
-        and (user := Database().user(update.from_user.id))
-        and user.system == "myschool"
-        and bool(user.token)
+           and (user := Database().user(update.from_user.id))
+           and user.system == "myschool"
+           and bool(user.token)
         else False
     )
 
+
 def isMySchoolUser(update: Message | CallbackQuery | InlineQuery | ChosenInlineResult) -> bool:
     return (
-        update.from_user
-        and (user := Database().user(update.from_user.id))
-        and user.system == "myschool"
-        and bool(user.token)
+            update.from_user
+            and (user := Database().user(update.from_user.id))
+            and user.system == "myschool"
+            and bool(user.token)
     )

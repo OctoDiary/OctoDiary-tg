@@ -6,17 +6,16 @@
 from datetime import date, timedelta
 
 from aiogram import F
+from aiogram.enums import ChatType
 from aiogram.filters import Command
 from aiogram.types import Message
-from aiogram.enums import ChatType
 
 from database import User
 from handlers.mes.router import APIs, Mes, MesUser, isMesUser, router
-from utils.other import handler
-from utils.texts import Texts
-
 from octodiary.exceptions import APIError
 from octodiary.types.mes.mobile import Visits
+from utils.other import handler
+from utils.texts import Texts
 
 
 def visits_info(visits: Visits) -> str:

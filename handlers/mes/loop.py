@@ -11,34 +11,34 @@ import jwt
 from aiogram import Bot, exceptions
 
 from database import Database
-from handlers.myschool.router import APIs, router as MySchoolRouter
-from handlers.myschool.scheduler import run_scheduler_for_chat
+from handlers.mes.router import APIs, router as MesRouter
+from handlers.mes.scheduler import run_scheduler_for_chat
 from loop import loop
-from octodiary.asyncApi.myschool import AsyncMobileAPI, AsyncWebAPI
+from octodiary.asyncApi.mes import AsyncMobileAPI
 from octodiary.exceptions import APIError
-from octodiary.types.myschool.mobile import EventsResponse, Notification
+from octodiary.types.mes.mobile import EventsResponse, Notification
 from utils.other import mark, pluralization_string
 from utils.texts import Texts
 
 db = Database()
 
 
-async def save_my_school_user_data(user_id):
+async def save_mes_user_data(user_id):
     user = db.user(str(user_id))
-    
+
     try:
         api = AsyncMobileAPI(token=user.token)
-        profile_id = (await api.get_users_profile_info())[0].id
-        profile = await api.get_profile(profile_id)
+        profile_id = (await api.get_users_profiles_info())[0].id
+        profile = await api.get_family_profile(profile_id)
         today = date.today()
         events: EventsResponse = await api.get_events(
             person_id=profile.children[0].contingent_guid,
             mes_role=profile.profile.type,
             begin_date=(
-                today - timedelta(days= -1*(0 - today.weekday()))
+                    today - timedelta(days=-1 * (0 - today.weekday()))
             ),
             end_date=(
-                today + timedelta(days= 7+(6 - today.weekday()))
+                    today + timedelta(days=7 + (6 - today.weekday()))
             )
         )
         notifications = await api.get_notifications(profile_id=profile_id, student_id=profile.children[0].id)
@@ -62,13 +62,13 @@ async def save_my_school_user_data(user_id):
         pass
 
 
-@MySchoolRouter.startup()
+@MesRouter.startup()
 @loop(600)
 async def save_users_data_loop(**kwargs):
     for func in [
-        save_my_school_user_data(user_id)
+        save_mes_user_data(user_id)
         for user_id in db.keys()
-        if user_id.isdigit() and db.get_key(user_id, "system", None) == Texts.Systems.MY_SCHOOL
+        if user_id.isdigit() and db.get_key(user_id, "system", None) == Texts.Systems.MES
     ]:
         await func
 
@@ -112,7 +112,7 @@ async def check_user_notifications(user_id, bot: Bot):
     user = db.user(user_id)
     if user.db_settings.get("skip_notifications", False):
         return
-    
+
     api = AsyncMobileAPI(token=user.token)
     try:
         notifications = await api.get_notifications(
@@ -122,31 +122,31 @@ async def check_user_notifications(user_id, bot: Bot):
         notifications.reverse()
     except APIError:
         return
-    
+
     for notification in notifications:
         id = int(
             notification
-                .datetime
-                    .replace("-", "")
-                    .replace(" ", "")
-                    .replace(":", "")
-                    .replace(".", "")
+            .datetime
+            .replace("-", "")
+            .replace(" ", "")
+            .replace(":", "")
+            .replace(".", "")
         )
         if user.db_skip_notifications:
             user.db_notified_ids = [*user.get("notified_ids", []), id]
             continue
 
         if (
-            user.db_settings.get("notifications", {}).get(notification.event_type, False)
-            and id not in user.get("notified_ids", [])
-            and (text := generate_text_notification(notification))
+                user.db_settings.get("notifications", {}).get(notification.event_type, False)
+                and id not in user.get("notified_ids", [])
+                and (text := generate_text_notification(notification))
         ):
             try:
                 await bot.send_message(int(user_id), text)
             except exceptions.TelegramRetryAfter as e:
                 await asyncio.sleep(e.retry_after)
                 await bot.send_message(int(user_id), text)
-            
+
             user.db_notified_ids = [*user.db_notified_ids, id]
             await asyncio.sleep(2)
 
@@ -154,41 +154,41 @@ async def check_user_notifications(user_id, bot: Bot):
         user.db_skip_notifications = False
 
 
-@MySchoolRouter.startup()
-@loop(60 * 1.5)
-async def send_notications(bot: Bot, **kwargs):
+@MesRouter.startup()
+@loop(90)
+async def send_notifications(bot: Bot, **kwargs):
     for func in [
-        check_user_notifications(user_id, bot)
+        asyncio.create_task(check_user_notifications(user_id, bot))
         for user_id in db.keys()
-        if user_id.isdigit() and db.get_key(user_id, "system", None) == Texts.Systems.MY_SCHOOL
+        if user_id.isdigit() and db.get_key(user_id, "system", None) == Texts.Systems.MES
     ]:
         await func
 
 
-@MySchoolRouter.startup()
+@MesRouter.startup()
 @loop(60)
 async def refresh_tokens(**kwargs):
     for user in {
         db.user(user_id)
         for user_id in db.keys()
-        if user_id.isdigit() and db.get_key(user_id, "system", None) == Texts.Systems.MY_SCHOOL
+        if user_id.isdigit() and db.get_key(user_id, "system", None) == Texts.Systems.MES
     }:
         await asyncio.sleep(1)
         exp = datetime.datetime.fromtimestamp(
             jwt.decode(user.token, options={"verify_signature": False})["exp"]
         )
         now = datetime.datetime.now()
-        if (now.year, now.month, now.day, now.hour-1, now.minute) < (exp.year, exp.month, exp.day, exp.hour, exp.minute) > (now.year, now.month, now.day, now.hour, now.minute):
-            user.token = await AsyncWebAPI(token=user.token).refresh_token(0, 0)
+        if abs(exp - now).total_seconds() <= 3600:
+            user.token = await AsyncMobileAPI(token=user.token).refresh_token()
 
 
-@MySchoolRouter.startup()
-@loop(60 * 2.5)
+@MesRouter.startup()
+@loop(150)
 async def scheduler_loop(bot: Bot, **kwargs):
     for user in {
         db.user(user_id)
         for user_id in db.keys()
-        if user_id.isdigit() and db.get_key(user_id, "system", None) == Texts.Systems.MY_SCHOOL
+        if user_id.isdigit() and db.get_key(user_id, "system", None) == Texts.Systems.MES
     }:
         await asyncio.sleep(1)
         scheduler = user.db_scheduler

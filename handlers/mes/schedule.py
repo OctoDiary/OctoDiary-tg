@@ -26,8 +26,17 @@ from utils.texts import Texts
 
 def day_schedule_info(events: EventsResponse, from_db, *, inline: bool = False, exclude_marks: bool = False):
     days_lessons = {}
+
     def weekday(x):
-        return {0: "понедельник", 1: "вторник", 2: "среду", 3: "четверг", 4: "пятницу", 5: "субботу", 6: "воскресенье"}[int(x)]
+        return {
+            0: "понедельник",
+            1: "вторник",
+            2: "среду",
+            3: "четверг",
+            4: "пятницу",
+            5: "субботу",
+            6: "воскресенье"
+        }[int(x)]
 
     available_other_source: dict[str, list[str]] = {}
 
@@ -44,19 +53,20 @@ def day_schedule_info(events: EventsResponse, from_db, *, inline: bool = False, 
 
         lesson_info = f"[ <b>ID</b>: <code>{event.id}</code> ]"
 
-        if not date_str in available_other_source:
+        if date_str not in available_other_source:
             available_other_source[date_str] = []
 
-        if event.source == "EC":
-            available_other_source[date_str] += ["EC"]
-            lesson_info = "[ <b>ВД*</b> ]"
-        elif event.source == "AE":
-            available_other_source[date_str] += ["AE"]
-            lesson_info = "[ <b>ДО*</b> ]"
-        elif event.source == "ORGANIZER":
-            available_other_source[date_str] += ["ORGANIZER"]
-            lesson_info = "[ <b>ЭКС*</b> ]"
 
+        match event.source:
+            case "ORGANIZER":
+                lesson_info = "[ <b>ЭКС*</b> ]"
+                available_other_source[date_str] += ["ORGANIZER"]
+            case "EC":
+                lesson_info = "[ <b>ВД*</b> ]"
+                available_other_source[date_str] += ["EC"]
+            case "AE":
+                lesson_info = "[ <b>ДО*</b> ]"
+                available_other_source[date_str] += ["AE"]
 
         homeworks = [
             homework.replace("\n", "</code>; <code>")
@@ -69,23 +79,25 @@ def day_schedule_info(events: EventsResponse, from_db, *, inline: bool = False, 
                 f"[ <code>{start.hour:02}:{start.minute:02}-{end.hour:02}:{end.minute:02}</code> ] [ <code>{event.room_number}к.</code> ] "
             )
             + lesson_info
-            + (f"\n  {'├' if event.cancelled or homeworks or event.marks else '└'} <b>Замена</b>: ✅" if event.replaced else "")
+            + (
+                f"\n  {'├' if event.cancelled or homeworks or event.marks else '└'} <b>Замена</b>: ✅" if event.replaced else "")
             + (f"\n  {'├' if homeworks or event.marks else '└'} <b>Отмена</b>: ✅" if event.cancelled else "")
             + (
                 (
-                    f"\n  {'├' if homeworks else '└'} <b>Оценки</b>: " + " | ".join([f"<code>{MARK(mark.value, mark.weight)}</code>" for mark in event.marks])
+                        f"\n  {'├' if homeworks else '└'} <b>Оценки</b>: " + " | ".join(
+                    [f"<code>{MARK(mark.value, mark.weight)}</code>" for mark in event.marks])
                 ) if event.marks and not exclude_marks else ""
             )
             + (
                 (
-                    (
                         (
-                            "\n  ├ <b>ДЗ</b>: <code>"
-                            + "</code>\n  ├ <b>ДЗ</b>: <code>".join(homeworks[:-1])
-                            + "</code>"
-                        ) if len(homeworks) > 1 else ""
-                    )
-                    + f"\n  └ <b>ДЗ</b>: <code>{homeworks[-1]}</code>"
+                            (
+                                    "\n  ├ <b>ДЗ</b>: <code>"
+                                    + "</code>\n  ├ <b>ДЗ</b>: <code>".join(homeworks[:-1])
+                                    + "</code>"
+                            ) if len(homeworks) > 1 else ""
+                        )
+                        + f"\n  └ <b>ДЗ</b>: <code>{homeworks[-1]}</code>"
                 ) if homeworks else ""
             )
         )
@@ -98,19 +110,20 @@ def day_schedule_info(events: EventsResponse, from_db, *, inline: bool = False, 
         ) + "\n".join(lessons) + Texts.LESSON_INFO_DETAIL(
             PREFIX="/" if not inline else "@OctoDiaryBot "
         ) + (
-            Texts.LESSON_DESIGNATIONS + "".join([
-                getattr(Texts.DESIGNATIONS, event_type)
-                for event_type in event_types
-            ])
-            if (
-                event_types := list(set(
-                    available_other_source.get(date_str, [])
-                ))
-            )
-            else ""
-        )
+                                    Texts.LESSON_DESIGNATIONS + "".join([
+                                        getattr(Texts.DESIGNATIONS, event_type)
+                                        for event_type in event_types
+                                    ])
+                                    if (
+                                        event_types := list(set(
+                                            available_other_source.get(date_str, [])
+                                        ))
+                                    )
+                                    else ""
+                                )
         for date_str, lessons in days_lessons.items()
     }
+
 
 def mark_info(mark: Mark) -> str:
     return Texts.MARK_INFO_SECOND(
@@ -121,6 +134,7 @@ def mark_info(mark: Mark) -> str:
         UPDATED_AT=mark.updated_at.strftime("%d.%m.%Y %H:%M"),
         COMMENT=mark.comment or "❌"
     )
+
 
 def homework_info(homework: LessonHomework) -> str:
     files = [
@@ -134,9 +148,9 @@ def homework_info(homework: LessonHomework) -> str:
         UPLOADED_FILES="✅" if files else "❌",
     ) + (
         (
-            ("\n   ├ " if len(files) > 1 else "")
-            + "\n   ├ ".join(files[:-1])
-            + f"\n   └ {files[-1]}"
+                ("\n   ├ " if len(files) > 1 else "")
+                + "\n   ├ ".join(files[:-1])
+                + f"\n   └ {files[-1]}"
         ) if files else ""
     )
 
@@ -184,7 +198,7 @@ def lesson_info(lesson: LessonScheduleItem) -> str:
 )
 @handler()
 async def schedule(message: Message, apis: APIs, user: User):
-    """Расписание"""
+    """Get schedule"""
 
     from_db = ""
     try:
@@ -193,10 +207,10 @@ async def schedule(message: Message, apis: APIs, user: User):
             person_id=user.db_profile["children"][0]["contingent_guid"],
             mes_role=user.db_profile["profile"]["type"],
             begin_date=(
-                today - timedelta(days= -1*(0 - today.weekday()))
+                    today - timedelta(days=-1 * (0 - today.weekday()))
             ),
             end_date=(
-                today + timedelta(days= 14+(6 - today.weekday()))
+                    today + timedelta(days=14 + (6 - today.weekday()))
             )
         )
     except APIError:
@@ -217,7 +231,7 @@ async def schedule(message: Message, apis: APIs, user: User):
 )
 @handler()
 async def get_lesson_info(message: Message, apis: APIs, user: User, command: CommandObject):
-    """Получить информацию o6 уроке"""
+    """Get lesson info"""
     lesson = await apis.mobile.get_schedule_item(
         profile_id=user.db_profile_id,
         student_id=user.db_profile["children"][0]["id"],

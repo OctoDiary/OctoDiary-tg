@@ -64,7 +64,7 @@ def markup(user: User, apis: APIs, section: Optional[str] = None):
 )
 @handler()
 async def settings(update: Message | CallbackQuery, apis: APIs, user: User):
-    """Настройки"""
+    """Settings"""
 
     return await update.bot.inline.answer(
         update=update,
@@ -75,9 +75,9 @@ async def settings(update: Message | CallbackQuery, apis: APIs, user: User):
 
 @handler()
 async def goals(update: CallbackQuery, apis: APIs, user: User):
-    settings = user.db_settings
-    settings["goals"] = not settings.get("goals", False)
-    user.db_settings = settings
+    settings_data = user.db_settings
+    settings_data["goals"] = not settings_data.get("goals", False)
+    user.db_settings = settings_data
     await update.bot.inline.answer(
         update=update,
         response=TEXT,
@@ -88,10 +88,10 @@ async def goals(update: CallbackQuery, apis: APIs, user: User):
 @handler()
 async def notifications(update: CallbackQuery, apis: APIs, user: User, attr: Optional[str] = None):
     if attr:
-        settings = user.db_settings
-        settings["notifications"] = settings.get("notifications", {})
-        settings["notifications"][attr] = not settings["notifications"].get(attr, False)
-        user.db_settings = settings
+        settings_data = user.db_settings
+        settings_data["notifications"] = settings_data.get("notifications", {})
+        settings_data["notifications"][attr] = not settings_data["notifications"].get(attr, False)
+        user.db_settings = settings_data
 
     await update.bot.inline.answer(
         update=update,

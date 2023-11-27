@@ -26,7 +26,7 @@ from utils.texts import Texts
 )
 @handler()
 async def enable_scheduler_cmd(message: Message, apis: APIs, user: User, bot: Bot):
-    """Включить авто-отправку расписания в том или ином чате"""
+    """Enable scheduler in current chat"""
 
     if message.chat.type == ChatType.PRIVATE:
         await message.answer(
@@ -76,7 +76,7 @@ async def enable_scheduler_cmd(message: Message, apis: APIs, user: User, bot: Bo
 )
 @handler()
 async def disable_scheduler_cmd(message: Message, user: User):
-    """Отключить авто-отправку расписания в том или ином чате"""
+    """Disable scheduler in current chat"""
 
     if message.chat.type == ChatType.PRIVATE:
         await message.answer(
@@ -114,9 +114,9 @@ async def run_scheduler_for_chat(
     scheduler = user.db_scheduler
     scheduler_info = scheduler[chat_id]
 
-    def get_message_with_bot(message: Message):
-        message.as_(bot=bot)
-        return message
+    def get_message_with_bot(_message: Message):
+        _message.as_(bot=bot)
+        return _message
 
     try:
         today = date.today()

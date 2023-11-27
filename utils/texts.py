@@ -45,4 +45,5 @@ class AllTexts:
         else:
             return item
 
+
 Texts = AllTexts()

@@ -71,7 +71,7 @@ async def inline_query(update: InlineQuery):
     F.func(MySchoolUser).as_("user"),
     F.func(MySchool).as_("apis"),
     F.result_id == Texts.MySchool.Inline.SCHEDULE.id,
-    F.inline_message_id.func(lambda IMI: IMI is not None)
+    F.inline_message_id.func(lambda inline_message_id: inline_message_id is not None)
 )
 @router.callback_query(
     F.func(isMySchoolUser),
@@ -112,7 +112,7 @@ async def schedule_load(update: ChosenInlineResult, bot: Bot, user: User, apis: 
     F.func(MySchoolUser).as_("user"),
     F.func(MySchool).as_("apis"),
     F.result_id == Texts.MySchool.Inline.PROFILE.id,
-    F.inline_message_id.func(lambda IMI: IMI is not None)
+    F.inline_message_id.func(lambda inline_message_id: inline_message_id is not None)
 )
 @router.callback_query(
     F.func(isMySchoolUser),
@@ -140,7 +140,7 @@ async def profile_load(update: ChosenInlineResult, bot: Bot, user: User, apis: A
     F.func(MySchoolUser).as_("user"),
     F.func(MySchool).as_("apis"),
     F.result_id == Texts.MySchool.Inline.HOMEWORKS_UPCOMING.id,
-    F.inline_message_id.func(lambda IMI: IMI is not None)
+    F.inline_message_id.func(lambda inline_message_id: inline_message_id is not None)
 )
 @router.callback_query(
     F.func(isMySchoolUser),
@@ -169,7 +169,7 @@ async def homeworks_upcoming_load(update: ChosenInlineResult, bot: Bot, user: Us
     F.func(MySchoolUser).as_("user"),
     F.func(MySchool).as_("apis"),
     F.result_id == Texts.MySchool.Inline.HOMEWORKS_PAST.id,
-    F.inline_message_id.func(lambda IMI: IMI is not None)
+    F.inline_message_id.func(lambda inline_message_id: inline_message_id is not None)
 )
 @router.callback_query(
     F.func(isMySchoolUser),
@@ -198,7 +198,7 @@ async def homeworks_past_load(update: ChosenInlineResult, bot: Bot, user: User, 
     F.func(MySchoolUser).as_("user"),
     F.func(MySchool).as_("apis"),
     F.result_id == Texts.MySchool.Inline.MARKS_BY_DATE.id,
-    F.inline_message_id.func(lambda IMI: IMI is not None)
+    F.inline_message_id.func(lambda inline_message_id: inline_message_id is not None)
 )
 @router.callback_query(
     F.func(isMySchoolUser),
@@ -227,7 +227,7 @@ async def marks_by_date_load(update: ChosenInlineResult, bot: Bot, user: User, a
     F.func(MySchoolUser).as_("user"),
     F.func(MySchool).as_("apis"),
     F.result_id == Texts.MySchool.Inline.MARKS_BY_SUBJECT.id,
-    F.inline_message_id.func(lambda IMI: IMI is not None)
+    F.inline_message_id.func(lambda inline_message_id: inline_message_id is not None)
 )
 @router.callback_query(
     F.func(isMySchoolUser),
@@ -257,7 +257,7 @@ async def marks_by_subject_load(update: ChosenInlineResult, bot: Bot, user: User
     F.func(MySchoolUser).as_("user"),
     F.func(MySchool).as_("apis"),
     F.result_id == Texts.MySchool.Inline.SETTINGS.id,
-    F.inline_message_id.func(lambda IMI: IMI is not None)
+    F.inline_message_id.func(lambda inline_message_id: inline_message_id is not None)
 )
 @router.callback_query(
     F.func(isMySchoolUser),
@@ -319,7 +319,7 @@ async def lesson_info_inline_query(update: InlineQuery, match: Match):
     F.func(MySchoolUser).as_("user"),
     F.func(MySchool).as_("apis"),
     F.result_id.regexp(r"lesson:(.*[0-9])").as_("match"),
-    F.inline_message_id.func(lambda IMI: IMI is not None)
+    F.inline_message_id.func(lambda inline_message_id: inline_message_id is not None)
 )
 @router.callback_query(
     F.func(isMySchoolUser),

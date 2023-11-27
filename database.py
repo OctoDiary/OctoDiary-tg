@@ -9,7 +9,7 @@ from lightdb import LightDB
 
 
 class User:
-    """Класс пользователя"""
+    """Class for user in database"""
 
     def __init__(self, db: "Database", user_id: str):
         self.__db = db
@@ -89,7 +89,7 @@ class User:
 
 class Database(LightDB):
     """
-    База данных бота
+    Main database class
     """
     __instance__ = None
 
@@ -98,11 +98,9 @@ class Database(LightDB):
             cls.__instance__ = super().__new__(cls)
         return cls.__instance__
 
-
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(location="users_db.json")
         self.settings = LightDB("settings.json")
-
 
     def __getattribute__(self, __name: str) -> Any:
         return (
@@ -122,8 +120,7 @@ class Database(LightDB):
             else super().__setattr__(__name, __value)
         )
 
-
-    def user(self, id: str) -> User:
+    def user(self, id: str | int) -> User:
         return User(self, str(id))
 
     @property
@@ -141,7 +138,7 @@ class Database(LightDB):
     @admins.setter
     def admins(self, value: list[str]) -> None:
         self.settings.set("admins", value)
-    
+
     @property
     def blocked_users(self) -> list[int]:
         return self.settings.get("blocked-users", [])

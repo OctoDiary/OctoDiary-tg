@@ -8,7 +8,6 @@ from aiogram.types import CallbackQuery, ChosenInlineResult, InlineQuery, Messag
 
 from database import Database, User
 from octodiary.asyncApi.mes import AsyncMobileAPI
-
 from utils.texts import Texts
 
 router = Router(name="MesRouter")

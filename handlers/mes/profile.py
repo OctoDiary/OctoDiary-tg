@@ -109,7 +109,7 @@ async def profile_info(profile: FamilyProfile, from_db: str, apis: APIs, user: U
 )
 @handler()
 async def profile(update: Message | CallbackQuery, apis: APIs, user: User):
-    """Профиль"""
+    """Get profile"""
 
     from_db = ""
     try:
@@ -130,7 +130,7 @@ async def profile(update: Message | CallbackQuery, apis: APIs, user: User):
 )
 @handler()
 async def logout_command(message: Message, user: User):
-    """Выход"""
+    """Logout"""
     await message.bot.inline.answer(
         update=message,
         response=Texts.LOGOUT_CONFIRM,

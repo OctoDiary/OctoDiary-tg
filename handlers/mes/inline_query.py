@@ -72,7 +72,7 @@ async def inline_query(update: InlineQuery):
     F.func(MesUser).as_("user"),
     F.func(Mes).as_("apis"),
     F.result_id == Texts.Mes.Inline.SCHEDULE.id,
-    F.inline_message_id.func(lambda IMI: IMI is not None)
+    F.inline_message_id.func(lambda inline_message_id: inline_message_id is not None)
 )
 @router.callback_query(
     F.func(isMesUser),
@@ -113,7 +113,7 @@ async def schedule_load(update: ChosenInlineResult, bot: Bot, user: User, apis: 
     F.func(MesUser).as_("user"),
     F.func(Mes).as_("apis"),
     F.result_id == Texts.Mes.Inline.PROFILE.id,
-    F.inline_message_id.func(lambda IMI: IMI is not None)
+    F.inline_message_id.func(lambda inline_message_id: inline_message_id is not None)
 )
 @router.callback_query(
     F.func(isMesUser),
@@ -141,7 +141,7 @@ async def profile_load(update: ChosenInlineResult, bot: Bot, user: User, apis: A
     F.func(MesUser).as_("user"),
     F.func(Mes).as_("apis"),
     F.result_id == Texts.Mes.Inline.HOMEWORKS_UPCOMING.id,
-    F.inline_message_id.func(lambda IMI: IMI is not None)
+    F.inline_message_id.func(lambda inline_message_id: inline_message_id is not None)
 )
 @router.callback_query(
     F.func(isMesUser),
@@ -170,7 +170,7 @@ async def homeworks_upcoming_load(update: ChosenInlineResult, bot: Bot, user: Us
     F.func(MesUser).as_("user"),
     F.func(Mes).as_("apis"),
     F.result_id == Texts.Mes.Inline.HOMEWORKS_PAST.id,
-    F.inline_message_id.func(lambda IMI: IMI is not None)
+    F.inline_message_id.func(lambda inline_message_id: inline_message_id is not None)
 )
 @router.callback_query(
     F.func(isMesUser),
@@ -199,7 +199,7 @@ async def homeworks_past_load(update: ChosenInlineResult, bot: Bot, user: User, 
     F.func(MesUser).as_("user"),
     F.func(Mes).as_("apis"),
     F.result_id == Texts.Mes.Inline.MARKS_BY_DATE.id,
-    F.inline_message_id.func(lambda IMI: IMI is not None)
+    F.inline_message_id.func(lambda inline_message_id: inline_message_id is not None)
 )
 @router.callback_query(
     F.func(isMesUser),
@@ -228,7 +228,7 @@ async def marks_by_date_load(update: ChosenInlineResult, bot: Bot, user: User, a
     F.func(MesUser).as_("user"),
     F.func(Mes).as_("apis"),
     F.result_id == Texts.Mes.Inline.MARKS_BY_SUBJECT.id,
-    F.inline_message_id.func(lambda IMI: IMI is not None)
+    F.inline_message_id.func(lambda inline_message_id: inline_message_id is not None)
 )
 @router.callback_query(
     F.func(isMesUser),
@@ -258,7 +258,7 @@ async def marks_by_subject_load(update: ChosenInlineResult, bot: Bot, user: User
     F.func(MesUser).as_("user"),
     F.func(Mes).as_("apis"),
     F.result_id == Texts.Mes.Inline.SETTINGS.id,
-    F.inline_message_id.func(lambda IMI: IMI is not None)
+    F.inline_message_id.func(lambda inline_message_id: inline_message_id is not None)
 )
 @router.callback_query(
     F.func(isMesUser),
@@ -280,7 +280,7 @@ async def settings_load(update: ChosenInlineResult, bot: Bot, user: User, apis: 
     F.func(MesUser).as_("user"),
     F.func(Mes).as_("apis"),
     F.result_id == Texts.Mes.Inline.VISITS.id,
-    F.inline_message_id.func(lambda IMI: IMI is not None)
+    F.inline_message_id.func(lambda inline_message_id: inline_message_id is not None)
 )
 @router.callback_query(
     F.func(isMesUser),
@@ -357,7 +357,7 @@ async def lesson_info_inline_query(update: InlineQuery, match: Match):
     F.func(MesUser).as_("user"),
     F.func(Mes).as_("apis"),
     F.result_id.regexp(r"lesson:(.*[0-9])").as_("match"),
-    F.inline_message_id.func(lambda IMI: IMI is not None)
+    F.inline_message_id.func(lambda inline_message_id: inline_message_id is not None)
 )
 @router.callback_query(
     F.func(isMesUser),

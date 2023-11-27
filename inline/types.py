@@ -22,12 +22,12 @@ class ButtonCallback(BaseModel):
 
     @classmethod
     def init(
-        cls,
-        data: str,
-        text: str,
-        callback: Callable[..., Any],
-        disable_deadline: bool = False,
-        *callback_args, **callback_kwargs
+            cls,
+            data: str,
+            text: str,
+            callback: Callable[..., Any],
+            disable_deadline: bool = False,
+            *callback_args, **callback_kwargs
     ) -> "ButtonCallback":
         return cls(
             data=data,
@@ -36,17 +36,16 @@ class ButtonCallback(BaseModel):
             callback_args=callback_args,
             callback_kwargs=callback_kwargs,
             delete_time=(
-                datetime.now() + timedelta(minutes=20)
+                    datetime.now() + timedelta(minutes=20)
             ) if not disable_deadline else None
         )
-
 
     async def run_callback(self, *args, **kwargs):
         if not self.callback:
             return None
         elif inspect.iscoroutinefunction(self.callback):
             return await self.callback(
-                *(self.callback_args+args),
+                *(self.callback_args + args),
                 **{**kwargs, **self.callback_kwargs}
             )
         else:
@@ -55,7 +54,7 @@ class ButtonCallback(BaseModel):
                 None,
                 functools.partial(
                     self.callback,
-                    *(self.callback_args+args),
+                    *(self.callback_args + args),
                     **{**kwargs, **self.callback_kwargs}
                 )
             )

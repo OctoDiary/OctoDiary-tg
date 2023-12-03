@@ -17,7 +17,8 @@ from handlers.myschool.scheduler import run_scheduler_for_chat
 from loop import loop
 from octodiary.asyncApi.myschool import AsyncMobileAPI, AsyncWebAPI
 from octodiary.exceptions import APIError
-from octodiary.types.myschool.mobile import EventsResponse, Notification
+from octodiary.types.myschool.mobile import EventsResponse
+from octodiary.types.myschool.mobile.marks import PayloadItem
 from utils.other import mark, pluralization_string
 from utils.texts import Texts
 
@@ -74,81 +75,83 @@ async def save_users_data_loop(**kwargs):
         await func
 
 
-def generate_text_notification(notif: Notification):
+def generate_text_notification(mark_data: PayloadItem, *, edited: bool = False, old_mark_value: str = ""):
     text = Texts.Notifications.TITLE
-    match notif.event_type:
-        case "create_mark":
-            text += Texts.Notifications.Mark.SUBTITLE
-            text += Texts.Notifications.Mark.SUBJECT(
-                SUBJECT_NAME=notif.subject_name
-            )
-            if notif.old_mark_value:
-                text += Texts.Notifications.Mark.OLD_MARK(
-                    MARK=str(notif.old_mark_value)
-                )
-            text += Texts.Notifications.Mark.NEW_MARK(
-                MARK=mark(notif.new_mark_value, notif.new_mark_weight)
-            )
-            text += Texts.Notifications.Mark.WORK_TYPE(
-                CONTROL_FORM_NAME=notif.control_form_name,
-                WEIGHT=pluralization_string(
-                    notif.new_mark_weight,
-                    ["балл", "балла", "баллов"]
-                ),
-                IS_EXAM_EMOJI="❗️" if notif.new_is_exam else ""
-            )
-            text += Texts.Notifications.Mark.LESSON_DATE(
-                TIME=str(notif.lesson_date)
-            )
-            text += Texts.Notifications.Mark.HASHTAGS(
-                DATE=notif.datetime[:10].replace("-", "_")
-            )
-        case _:
-            return ""
+    if edited:
+        texts = Texts.Notifications.EditedMark
+    else:
+        texts = Texts.Notifications.Mark
 
+    text += texts.SUBTITLE
+    text += texts.SUBJECT(
+        SUBJECT_NAME=mark_data.subject_name
+    )
+    if edited:
+        text += texts.OLD_MARK(MARK=old_mark_value)
+    text += texts.NEW_MARK(
+        MARK=mark(mark_data.value, mark_data.weight)
+    )
+    text += texts.WORK_TYPE(
+        CONTROL_FORM_NAME=mark_data.control_form_name,
+        WEIGHT=pluralization_string(
+            mark_data.weight,
+            ["балл", "балла", "баллов"]
+        ),
+        IS_EXAM_EMOJI="❗️" if mark_data.is_exam else ""
+    )
+    text += texts.LESSON_DATE(
+        TIME=str(mark_data.date)
+    )
+    text += texts.HASHTAGS(
+        DATE=mark_data.updated_at[:10].replace("-", "_")
+    )
     return text
 
 
 async def check_user_notifications(user_id, bot: Bot):
     user = db.user(user_id)
-    if user.db_settings.get("skip_notifications", False):
-        return
+    if user.db_notified_marks_ids is None:
+        user.db_notified_marks_ids = {}
 
     api = AsyncMobileAPI(token=user.token)
-    try:
-        notifications = await api.get_notifications(
-            profile_id=user.db_profle_id,
-            student_id=user.db_profile["children"][0]["id"]
-        )
-        notifications.reverse()
-    except APIError:
-        return
 
-    for notification in notifications:
-        id = int(
-            notification
-            .datetime
-            .replace("-", "")
-            .replace(" ", "")
-            .replace(":", "")
-            .replace(".", "")
-        )
-        if user.db_skip_notifications:
-            user.db_notified_ids = [*user.get("notified_ids", []), id]
-            continue
+    if user.db_settings.get("notifications", {}).get("create_mark", False):
+        try:
+            marks = sorted(
+                (
+                    await api.get_marks(
+                        student_id=user.db_profile["children"][0]["id"],
+                        profile_id=user.db_profile_id,
+                        from_date=date.today() - timedelta(weeks=3),
+                        to_date=date.today()
+                    )
+                ).payload,
+                key=lambda x: datetime.datetime.fromisoformat(x.updated_at),
+                reverse=True
+            )
+        except APIError:
+            return
 
-        if (
-                user.db_settings.get("notifications", {}).get(notification.event_type, False)
-                and id not in user.get("notified_ids", [])
-                and (text := generate_text_notification(notification))
-        ):
+        for mark_data in marks:
+            ID = str(mark_data.id)
+            if user.db_skip_notifications:
+                user.db_notified_marks_ids[ID] = mark_data.value
+                continue
+
+            if ID in user.db_notified_marks_ids:
+                if user.db_notified_marks_ids[ID] != mark_data.value:
+                    await bot.send_message(int(user_id), generate_text_notification(mark_data, edited=True))
+                    user.db_notified_marks_ids[ID] = mark_data.value
+                continue
+
             try:
-                await bot.send_message(int(user_id), text)
+                await bot.send_message(int(user_id), generate_text_notification(mark_data))
             except exceptions.TelegramRetryAfter as e:
                 await asyncio.sleep(e.retry_after)
-                await bot.send_message(int(user_id), text)
+                await bot.send_message(int(user_id), generate_text_notification(mark_data))
 
-            user.db_notified_ids = [*user.db_notified_ids, id]
+            user.db_notified_marks_ids = user.db_notified_marks_ids | {ID: mark_data.value}
+            user.save()
             await asyncio.sleep(2)
 
     if user.db_skip_notifications:

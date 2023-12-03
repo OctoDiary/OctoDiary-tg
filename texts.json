@@ -112,11 +112,19 @@
         "Mark": {
             "SUBTITLE": " [ <code>Оценка</code> ]\n\n",
             "SUBJECT": "┌ <b>Предмет</b>: <code>{SUBJECT_NAME}</code>\n",
+            "NEW_MARK": "├ <b>Новая оценка</b>: <code>{MARK}</code>\n",
+            "WORK_TYPE": "├ <b>Тип</b> работы: <code>{CONTROL_FORM_NAME}</code> - {WEIGHT} {IS_EXAM_EMOJI}\n",
+            "LESSON_DATE": "└ <b>Дата</b> урока: <code>{TIME}</code>\n\n",
+            "HASHTAGS": "<tg-spoiler>#newMark #notification #date_{DATE}</tg-spoiler>"
+        },
+        "EditedMark": {
+            "SUBTITLE": " [ <code>Оценка</code> ] [ <code>Изменение</code> ]\n\n",
+            "SUBJECT": "┌ <b>Предмет</b>: <code>{SUBJECT_NAME}</code>\n",
             "OLD_MARK": "├ <b>Старая</b> оценка: <code>{MARK}</code>\n",
             "NEW_MARK": "├ <b>Новая оценка</b>: <code>{MARK}</code>\n",
             "WORK_TYPE": "├ <b>Тип</b> работы: <code>{CONTROL_FORM_NAME}</code> - {WEIGHT} {IS_EXAM_EMOJI}\n",
-            "LESSON_DATE": "└ <b>Дата и время</b> урока: <code>{TIME}</code>\n\n",
-            "HASHTAGS": "<tg-spoiler>#newMark #notification #date_{DATE}</tg-spoiler>"
+            "LESSON_DATE": "└ <b>Дата</b> урока: <code>{TIME}</code>\n\n",
+            "HASHTAGS": "<tg-spoiler>#editedMark #notification #date_{DATE}</tg-spoiler>"
         }
     },
     "HOMEWORKS_FOR_DATE": "📝 <b>Домашние задания на {DATE}:</b>\n\n",

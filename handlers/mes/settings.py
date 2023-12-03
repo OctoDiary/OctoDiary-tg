@@ -2,13 +2,14 @@
 #          Licensed under the MIT License
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
-
+import os
 from typing import Optional
 
+import segno
 from aiogram import F
 from aiogram.enums import ChatType
 from aiogram.filters import Command
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, FSInputFile, Message
 
 from database import User
 from handlers.mes.router import APIs, Mes, MesUser, isMesUser, router
@@ -32,11 +33,19 @@ def markup(user: User, apis: APIs, section: Optional[str] = None):
                 "callback": notifications,
                 "kwargs": {"apis": apis, "user": user}
             },
+        ],
+        [
+            {
+                "text": Texts.Buttons.APP_AUTHORIZATION,
+                "callback": send_app_auth,
+                "kwargs": {"user": user}
+            }
         ]
     ] if not section else [
         [
             {
-                "text": Texts.Buttons.MARKS + ("✅" if user.db_settings.get("notifications", {}).get("create_mark", False) else "❌"),
+                "text": Texts.Buttons.MARKS + (
+                    "✅" if user.db_settings.get("notifications", {}).get("create_mark", False) else "❌"),
                 "callback": notifications,
                 "kwargs": {"apis": apis, "user": user, "attr": "create_mark"}
             },
@@ -98,3 +107,32 @@ async def notifications(update: CallbackQuery, apis: APIs, user: User, attr: Opt
         response=NOTIFICATIONS,
         reply_markup=markup(user, apis, "notifications")
     )
+
+
+@handler()
+async def send_app_auth(update: CallbackQuery, user: User):
+    await update.answer()
+    if str(update.from_user.id) != user.id:
+        return
+
+    qr_code = segno.make_qr(
+        content="dnevnik-mes://tgbot?code=%s&system=0" % user.token,
+
+    )
+    qr_code.save(f"app_auth_qr_code_{user.id}.png", scale=5)
+
+    await update.bot.send_photo(
+        update.from_user.id,
+        photo=FSInputFile(f"app_auth_qr_code_{user.id}.png"),
+        caption=Texts.SETTINGS_APP_AUTH,
+        reply_markup=update.bot.inline.generate_markup([
+            [
+                {
+                    "text": Texts.SETTINGS_APP_AUTH_DIRECTLY,
+                    "url": "https://octodiary.dsop.online/redir?token=%s&system=0" % user.token
+                }
+            ]
+        ])
+    )
+
+    os.remove(f"app_auth_qr_code_{user.id}.png")

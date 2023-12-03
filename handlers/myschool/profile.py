@@ -57,6 +57,8 @@ def profile_info(profile: FamilyProfile, from_db: str) -> str:
 async def profile(update: Message | CallbackQuery, apis: APIs, user: User):
     """Get profile"""
 
+    response = await update.answer(Texts.LOADING)
+
     from_db = ""
     try:
         profile = await apis.mobile.get_profile(user.db_profile_id)
@@ -64,7 +66,7 @@ async def profile(update: Message | CallbackQuery, apis: APIs, user: User):
         profile = FamilyProfile.model_validate(user.db_profile)
         from_db = Texts.FROM_DB
 
-    await update.answer(text=profile_info(profile, from_db))
+    await response.edit_text(text=profile_info(profile, from_db))
 
 
 @router.message(

@@ -52,7 +52,7 @@ class Form(StatesGroup):
 async def check_token_and_send_confirm(message: Message, token: str, state: FSMContext):
     if not token:
         await state.clear()
-        await message.answer(
+        await message.edit_text(
             Texts.Authorization.INVALID_ACCOUNT,
         )
         return
@@ -82,7 +82,7 @@ async def check_token_and_send_confirm(message: Message, token: str, state: FSMC
                 user_type = Texts.Authorization.TYPE_PARENT
             case _:
                 await state.clear()
-                await message.answer(text=Texts.Authorization.UNKNOWN_ACCOUNT_TYPE)
+                await message.edit_text(text=Texts.Authorization.UNKNOWN_ACCOUNT_TYPE)
                 return
 
         await state.update_data(
@@ -98,9 +98,10 @@ async def check_token_and_send_confirm(message: Message, token: str, state: FSMC
             text=Texts.Authorization.CONFIRM(profile=profile, type=user_type),
             reply_markup=YES_OR_NO
         )
+        await message.delete()
     except APIError as e:
         await state.clear()
-        await message.answer(text=Texts.Authorization.ERROR_TRY_AGAIN(ERROR=str(e)))
+        await message.edit_text(text=Texts.Authorization.ERROR_TRY_AGAIN(ERROR=str(e)))
 
 
 @auth_router.message(Command(commands=["auth", "login"]))
@@ -186,7 +187,9 @@ async def set_login_type(message: Message, state: FSMContext):
 
 @auth_router.message(Form.token, AuthFilter())
 async def set_token(message: Message, state: FSMContext):
-    await check_token_and_send_confirm(message, token=message.text, state=state)
+    response = await message.answer(Texts.LOADING)
+
+    await check_token_and_send_confirm(response, token=message.text, state=state)
 
 
 @auth_router.message(Form.username)
@@ -366,7 +369,8 @@ async def set_password(message: Message, state: FSMContext, bot: Bot):
                     await state.set_state(Form.gosuslugi_mfa)
                     await send_mfa_user_request(api=api, message=message)
                 else:
-                    await check_token_and_send_confirm(message, response, state)
+                    response_msg = await message.answer(Texts.LOADING)
+                    await check_token_and_send_confirm(response_msg, response, state)
         case Texts.Systems.MES:
             api = MESMobileAPI()
             try:
@@ -404,7 +408,8 @@ async def set_password(message: Message, state: FSMContext, bot: Bot):
                         parse_mode="HTML"
                     )
                 else:
-                    await check_token_and_send_confirm(message, response, state)
+                    response_msg = await message.answer(Texts.LOADING)
+                    await check_token_and_send_confirm(response_msg, response, state)
 
 
 @auth_router.message(Form.gosuslugi_mfa)
@@ -430,7 +435,8 @@ async def set_gosuslugi_mfa(message: Message, state: FSMContext, bot: Bot):
             await state.set_state(Form.gosuslugi_captcha)
             await send_captcha(response=response, message=message, bot=bot)
         else:
-            await check_token_and_send_confirm(message, response, state)
+            response_msg = await message.answer(Texts.LOADING)
+            await check_token_and_send_confirm(response_msg, response, state)
 
 
 @auth_router.message(Form.gosuslugi_captcha)
@@ -463,7 +469,8 @@ async def asnwer_gosuslugi_captcha(message: Message, state: FSMContext, bot: Bot
             await state.set_state(Form.gosuslugi_mfa)
             await send_mfa_user_request(api=api, message=message)
         else:
-            await check_token_and_send_confirm(message, response, state)
+            response_msg = await message.answer(Texts.LOADING)
+            await check_token_and_send_confirm(response_msg, response, state)
 
 
 @auth_router.message(Form.blitz_otp)
@@ -491,7 +498,8 @@ async def set_blitz_otp(message: Message, state: FSMContext):
                 await message.answer(text=Texts.Authorization.ERROR_TRY_AGAIN(ERROR=str(e)))
                 raise e
     else:
-        await check_token_and_send_confirm(message, response, state)
+        response_msg = await message.answer(Texts.LOADING)
+        await check_token_and_send_confirm(response_msg, response, state)
 
 
 @auth_router.message(Form.confirm)
@@ -504,6 +512,7 @@ async def confirm(message: Message, state: FSMContext):
                 reply_markup=ReplyKeyboardRemove()
             )
         case Texts.YES:
+            response = await message.answer(Texts.LOADING)
             data = await state.get_data()
             db = Database()
             user = db.user(str(message.from_user.id))
@@ -535,7 +544,7 @@ async def confirm(message: Message, state: FSMContext):
 
             await state.clear()
 
-            await message.answer(
+            await response.answer(
                 text=Texts.Authorization.SUCCESS_CONFIRM,
                 reply_markup=(
                     (
@@ -547,3 +556,4 @@ async def confirm(message: Message, state: FSMContext):
                     else None
                 )
             )
+            await response.delete()

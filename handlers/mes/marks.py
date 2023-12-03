@@ -114,6 +114,8 @@ def marks_sorted_by_subject_info(marks_short: ShortSubjectMarks, goals: bool = F
 async def marks_by_date(message: Message, apis: APIs, user: User):
     """Marks users by date."""
 
+    response = await message.answer(Texts.LOADING)
+
     marks = await apis.mobile.get_marks(
         student_id=user.db_profile["children"][0]["id"],
         profile_id=user.db_profile_id,
@@ -122,7 +124,7 @@ async def marks_by_date(message: Message, apis: APIs, user: User):
     )
 
     await message.bot.inline.list(
-        update=message,
+        update=response,
         row_width=5,
         **sort_dict_by_date(marks_sorted_by_date_info(marks), reverse=True)
     )
@@ -145,13 +147,15 @@ async def marks_by_date(message: Message, apis: APIs, user: User):
 async def marks_by_subject(message: Message, apis: APIs, user: User):
     """Marks users by subject."""
 
+    response = await message.answer(Texts.LOADING)
+
     marks = await apis.mobile.get_subject_marks_short(
         student_id=user.db_profile["children"][0]["id"],
         profile_id=user.db_profile_id
     )
 
     await message.bot.inline.list(
-        update=message,
+        update=response,
         row_width=2,
         strings=marks_sorted_by_subject_info(
             marks,

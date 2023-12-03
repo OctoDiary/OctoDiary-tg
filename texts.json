@@ -297,5 +297,6 @@
             }
         },
         "VISIT": "┌ <b>Дата</b>: <b>{DATE}</b>\n├ Время <b>входа</b>: <code>{VISIT.in_}</code>\n├ Время <b>выхода</b>: <code>{VISIT.out}</code>\n└ <b>Общее времянахождение</b>: <code>{VISIT.duration}</code>"
-    }
+    },
+    "LOADING": "<i>⏳ Загрузка...</i>"
 }

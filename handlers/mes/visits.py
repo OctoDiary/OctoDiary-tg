@@ -46,6 +46,9 @@ def visits_info(visits: Visits) -> str:
 )
 @handler()
 async def visits_cmd(update: Message, apis: APIs, user: User):
+    """Visits information"""
+    response = await update.answer(Texts.LOADING)
+
     try:
         today = date.today()
         visits = await apis.mobile.get_visits(
@@ -56,11 +59,11 @@ async def visits_cmd(update: Message, apis: APIs, user: User):
             to_date=today,
         )
     except APIError as e:
-        await update.answer(
+        await response.edit_text(
             Texts.API_ERROR(ERROR=e)
         )
         return
     
-    return await update.answer(
+    return await response.edit_text(
         visits_info(visits)
     )

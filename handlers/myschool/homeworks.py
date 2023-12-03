@@ -59,6 +59,8 @@ def homeworks_info(homeworks: ShortHomeworks):
 async def homeworks_upcoming(message: Message, apis: APIs, user: User):
     """Homeworks upcoming"""
 
+    response = await message.answer(Texts.LOADING)
+
     homeworks = await apis.mobile.get_homeworks_short(
         student_id=user.db_profile["children"][0]["id"],
         profile_id=user.db_profile_id,
@@ -67,7 +69,7 @@ async def homeworks_upcoming(message: Message, apis: APIs, user: User):
     )
 
     await message.bot.inline.list(
-        update=message,
+        update=response,
         row_width=5,
         **sort_dict_by_date(homeworks_info(homeworks)),
     )
@@ -90,6 +92,8 @@ async def homeworks_upcoming(message: Message, apis: APIs, user: User):
 async def homeworks_past(message: Message, apis: APIs, user: User):
     """Homeworks past"""
 
+    response = await message.answer(Texts.LOADING)
+
     homeworks = await apis.mobile.get_homeworks_short(
         student_id=user.db_profile["children"][0]["id"],
         profile_id=user.db_profile_id,
@@ -98,7 +102,7 @@ async def homeworks_past(message: Message, apis: APIs, user: User):
     )
 
     await message.bot.inline.list(
-        update=message,
+        update=response,
         row_width=5,
         **sort_dict_by_date(homeworks_info(homeworks), reverse=True)
     )

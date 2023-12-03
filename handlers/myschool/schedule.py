@@ -199,6 +199,8 @@ def lesson_info(lesson: LessonScheduleItems) -> str:
 async def schedule(message: Message, apis: APIs, user: User):
     """Get schedule"""
 
+    response = await message.answer(Texts.LOADING)
+
     from_db = ""
     try:
         today = date.today()
@@ -218,7 +220,7 @@ async def schedule(message: Message, apis: APIs, user: User):
 
     strings = day_schedule_info(events, from_db)
     await message.bot.inline.list(
-        message, **sort_dict_by_date(strings), row_width=5,
+        response, **sort_dict_by_date(strings), row_width=5,
     )
 
 
@@ -231,12 +233,15 @@ async def schedule(message: Message, apis: APIs, user: User):
 @handler()
 async def get_lesson_info(message: Message, apis: APIs, user: User, command: CommandObject):
     """Get lesson info"""
+
+    response = await message.answer(Texts.LOADING)
+
     lesson = await apis.mobile.get_lesson_schedule_items(
         profile_id=user.db_profile_id,
         student_id=user.db_profile["children"][0]["id"],
         lesson_id=command.args.strip()
     )
 
-    return await message.answer(
+    return await response.edit_text(
         lesson_info(lesson)
     )

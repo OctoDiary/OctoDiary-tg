@@ -10,15 +10,15 @@ from datetime import datetime
 from typing import Callable, List, Optional, Union
 from urllib.parse import urlparse
 
-from aiogram import Bot, Dispatcher, F, Router, types
+from aiogram import Bot, Dispatcher, Router, types
 
-from inline.types import ButtonCallback
+from inline.types import AdditionalButtons, ButtonCallback, ReplyMarkup
 from loop import loop
 from utils.texts import Texts
 
 logger = logging.getLogger("BotInlineManager")
 
-ReplyMarkup = Union[dict, list[dict], list[list[dict]]]
+
 Strings = Union[
     list[str],
     dict[str, str]
@@ -54,7 +54,8 @@ class BotInlineManager:
     async def callback_query_handler(self, call: types.CallbackQuery):
         if call.data in self.inline_buttons_map:
             await self.inline_buttons_map[call.data].run_callback(call)
-            del self.inline_buttons_map[call.data]
+            if not self.inline_buttons_map[call.data].reusable:
+                del self.inline_buttons_map[call.data]
         else:
             return await call.answer(
                 text=Texts.CALLBACK_DEADLINED,
@@ -109,10 +110,10 @@ class BotInlineManager:
     def normalize_markup(self, markup: ReplyMarkup) -> ReplyMarkup:
         return (
             [[markup]]
-            if isinstance(markup, dict)
+            if isinstance(markup, (dict, ButtonCallback))
             else [markup]
             if isinstance(markup, list) and any(
-                isinstance(i, dict) for i in markup
+                isinstance(i, (dict, ButtonCallback)) for i in markup
             )
             else markup
         )
@@ -159,6 +160,11 @@ class BotInlineManager:
                     line.append(button)
                     continue
 
+                if isinstance(button, ButtonCallback):
+                    self.inline_buttons_map[button.data] = button
+                    line.append(button)
+                    continue
+
                 try:
                     if "url" in button:
                         try:
@@ -184,6 +190,8 @@ class BotInlineManager:
                             text=button["text"],
                             callback=button["callback"],
                             disable_deadline=disable_deadline,
+                            reusable=button.get("reusable", False),
+                            delete_time=button.get("delete_time", None),
                             *button.get("args", ()),
                             **button.get("kwargs", {})
                         )
@@ -318,11 +326,15 @@ class BotInlineManager:
             strings: Strings,
             current_page: Union[int, str] = 1,
             row_width: int = 3,
-            rows: Optional[ReplyMarkup] = None
+            additional_buttons: Optional[AdditionalButtons] = None,
     ):
+        if not additional_buttons:
+            additional_buttons = AdditionalButtons()
+
         if isinstance(strings, dict):
             return self.generate_markup(
-                self.chunks([
+                self.normalize_markup(additional_buttons.up_buttons)
+                + self.chunks([
                     {
                         "text": (
                             f"· {btn} ·" if (
@@ -332,118 +344,128 @@ class BotInlineManager:
                         "callback": self._list_callback,
                         "kwargs": {
                             "new_text": strings[btn],
-                            "markup": self._list_markup(strings, list(strings.keys())[num], row_width, rows)
+                            "markup": self._list_markup(
+                                strings,
+                                list(strings.keys())[num],
+                                row_width,
+                                additional_buttons
+                            )
                         }
                     }
                     for num, btn in enumerate(list(strings.keys()))
                 ], row_width)
+                + self.normalize_markup(additional_buttons.below_buttons)
             )
         else:
             current = (current_page if isinstance(current_page, int) else strings.index(current_page) + 1)
             return self.generate_markup(
-                [
-                    {
-                        "text": str(num) if num != current else f"· {num} ·",
-                        "callback": self._list_callback,
-                        "kwargs": {
-                            "new_text": strings[num - 1],
-                            "markup": self._list_markup(strings, num, row_width, rows)
-                        }
-                    }
-                    for num in range(1, len(strings) + 1)
-                ] if len(strings) <= 5 else [
-                    {
-                        "text": f"· {num} ·",
-                        "callback": self._list_callback,
-                        "kwargs": {
-                            "new_text": strings[num - 1],
-                            "markup": self._list_markup(strings, num, row_width, rows)
-                        }
-                    } if num == current else {
-                        "text": f"{num} ›",
-                        "callback": self._list_callback,
-                        "kwargs": {
-                            "new_text": strings[num - 1],
-                            "markup": self._list_markup(strings, num, row_width, rows)
-                        }
-                    } if num == 4 else {
-                        "text": f"{len(strings)} »",
-                        "callback": self._list_callback,
-                        "kwargs": {
-                            "new_text": strings[-1],
-                            "markup": self._list_markup(strings, len(strings), row_width, rows)
-                        }
-                    } if num == 5 else {
-                        "text": str(num),
-                        "callback": self._list_callback,
-                        "kwargs": {
-                            "new_text": strings[num - 1],
-                            "markup": self._list_markup(strings, num, row_width, rows)
-                        }
-                    }
-                    for num in range(1, 6)
-                ] if current <= 3 else [
-                    {
-                        "text": f"« {1}",
-                        "callback": self._list_callback,
-                        "kwargs": {
-                            "new_text": strings[0],
-                            "markup": self._list_markup(strings, 1, row_width, rows)
-                        }
-                    },
-                    *[
+                self.normalize_markup(additional_buttons.up_buttons)
+                + (
+                    [
                         {
-                            "text": f"· {num} ·" if num == current else str(num),
+                            "text": str(num) if num != current else f"· {num} ·",
                             "callback": self._list_callback,
                             "kwargs": {
                                 "new_text": strings[num - 1],
-                                "markup": self._list_markup(strings, num, row_width, rows)
+                                "markup": self._list_markup(strings, num, row_width, additional_buttons)
                             }
                         }
-                        for num in range(len(strings) - 2, len(strings) + 1)
+                        for num in range(1, len(strings) + 1)
+                    ] if len(strings) <= 5 else [
+                        {
+                            "text": f"· {num} ·",
+                            "callback": self._list_callback,
+                            "kwargs": {
+                                "new_text": strings[num - 1],
+                                "markup": self._list_markup(strings, num, row_width, additional_buttons)
+                            }
+                        } if num == current else {
+                            "text": f"{num} ›",
+                            "callback": self._list_callback,
+                            "kwargs": {
+                                "new_text": strings[num - 1],
+                                "markup": self._list_markup(strings, num, row_width, additional_buttons)
+                            }
+                        } if num == 4 else {
+                            "text": f"{len(strings)} »",
+                            "callback": self._list_callback,
+                            "kwargs": {
+                                "new_text": strings[-1],
+                                "markup": self._list_markup(strings, len(strings), row_width, additional_buttons)
+                            }
+                        } if num == 5 else {
+                            "text": str(num),
+                            "callback": self._list_callback,
+                            "kwargs": {
+                                "new_text": strings[num - 1],
+                                "markup": self._list_markup(strings, num, row_width, additional_buttons)
+                            }
+                        }
+                        for num in range(1, 6)
+                    ] if current <= 3 else [
+                        {
+                            "text": f"« {1}",
+                            "callback": self._list_callback,
+                            "kwargs": {
+                                "new_text": strings[0],
+                                "markup": self._list_markup(strings, 1, row_width, additional_buttons)
+                            }
+                        },
+                        *[
+                            {
+                                "text": f"· {num} ·" if num == current else str(num),
+                                "callback": self._list_callback,
+                                "kwargs": {
+                                    "new_text": strings[num - 1],
+                                    "markup": self._list_markup(strings, num, row_width, additional_buttons)
+                                }
+                            }
+                            for num in range(len(strings) - 2, len(strings) + 1)
+                        ]
+                    ] if current > len(strings) - 3 else [
+                        {
+                            "text": f"« {1}",
+                            "callback": self._list_callback,
+                            "kwargs": {
+                                "new_text": strings[0],
+                                "markup": self._list_markup(strings, 1, row_width, additional_buttons)
+                            }
+                        },
+                        {
+                            "text": f"‹ {current - 1}",
+                            "callback": self._list_callback,
+                            "kwargs": {
+                                "new_text": strings[current - 2],
+                                "markup": self._list_markup(strings, current - 1, row_width, additional_buttons)
+                            }
+                        },
+                        {
+                            "text": f"· {current} ·",
+                            "callback": self._list_callback,
+                            "kwargs": {
+                                "new_text": strings[current - 1],
+                                "markup": self._list_markup(strings, current, row_width, additional_buttons)
+                            }
+                        },
+                        {
+                            "text": f"{current + 1} ›",
+                            "callback": self._list_callback,
+                            "kwargs": {
+                                "new_text": strings[current],
+                                "markup": self._list_markup(strings, current + 1, row_width, additional_buttons)
+                            }
+                        },
+                        {
+                            "text": f"{len(strings)} »",
+                            "callback": self._list_callback,
+                            "kwargs": {
+                                "new_text": strings[-1],
+                                "markup": self._list_markup(strings, len(strings), row_width, additional_buttons)
+                            }
+                        }
                     ]
-                ] if current > len(strings) - 3 else [
-                    {
-                        "text": f"« {1}",
-                        "callback": self._list_callback,
-                        "kwargs": {
-                            "new_text": strings[0],
-                            "markup": self._list_markup(strings, 1, row_width, rows)
-                        }
-                    },
-                    {
-                        "text": f"‹ {current - 1}",
-                        "callback": self._list_callback,
-                        "kwargs": {
-                            "new_text": strings[current - 2],
-                            "markup": self._list_markup(strings, current - 1, row_width, rows)
-                        }
-                    },
-                    {
-                        "text": f"· {current} ·",
-                        "callback": self._list_callback,
-                        "kwargs": {
-                            "new_text": strings[current - 1],
-                            "markup": self._list_markup(strings, current, row_width, rows)
-                        }
-                    },
-                    {
-                        "text": f"{current + 1} ›",
-                        "callback": self._list_callback,
-                        "kwargs": {
-                            "new_text": strings[current],
-                            "markup": self._list_markup(strings, current + 1, row_width, rows)
-                        }
-                    },
-                    {
-                        "text": f"{len(strings)} »",
-                        "callback": self._list_callback,
-                        "kwargs": {
-                            "new_text": strings[-1],
-                            "markup": self._list_markup(strings, len(strings), row_width, rows)
-                        }
-                    }
-                ]
+                )
+                + self.normalize_markup(additional_buttons.below_buttons)
             )
 
     async def list(
@@ -458,6 +480,7 @@ class BotInlineManager:
             strings: Strings,
             row_width: int = 3,
             current_page: Union[int, str] = 1,
+            additional_buttons: Optional[AdditionalButtons] = None,
             *,
             disable_deadline: bool = False,
             **kwargs
@@ -483,7 +506,8 @@ class BotInlineManager:
                 else 1
                 if isinstance(strings, list)
                 else next(iter(strings.keys())),
-                row_width
+                row_width,
+                additional_buttons
             ),
             disable_deadline=disable_deadline,
             **kwargs

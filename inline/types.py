@@ -7,9 +7,14 @@ import asyncio
 import functools
 import inspect
 from datetime import datetime, timedelta
-from typing import Any, Callable
+from typing import Any, Callable, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+ReplyMarkup = Union[
+    dict, list[dict], list[list[dict]],
+    "ButtonCallback", list["ButtonCallback"], list[list["ButtonCallback"]]
+]
 
 
 class ButtonCallback(BaseModel):
@@ -19,6 +24,7 @@ class ButtonCallback(BaseModel):
     callback_args: Any
     callback_kwargs: Any
     delete_time: datetime | None
+    reusable: bool = False
 
     @classmethod
     def init(
@@ -27,6 +33,8 @@ class ButtonCallback(BaseModel):
             text: str,
             callback: Callable[..., Any],
             disable_deadline: bool = False,
+            reusable: bool = False,
+            delete_time: datetime | None = None,
             *callback_args, **callback_kwargs
     ) -> "ButtonCallback":
         return cls(
@@ -36,8 +44,9 @@ class ButtonCallback(BaseModel):
             callback_args=callback_args,
             callback_kwargs=callback_kwargs,
             delete_time=(
-                    datetime.now() + timedelta(minutes=20)
-            ) if not disable_deadline else None
+                delete_time if delete_time else datetime.now() + timedelta(minutes=20)
+            ) if not disable_deadline else None,
+            reusable=reusable
         )
 
     async def run_callback(self, *args, **kwargs):
@@ -62,3 +71,8 @@ class ButtonCallback(BaseModel):
     async def update_callback_args(self, *args, **kwargs):
         self.callback_args = args
         self.callback_kwargs = kwargs
+
+
+class AdditionalButtons(BaseModel):
+    up_buttons: ReplyMarkup = Field([])
+    below_buttons: ReplyMarkup = Field([])

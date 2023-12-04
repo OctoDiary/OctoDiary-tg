@@ -8,11 +8,13 @@ from datetime import date, timedelta
 from aiogram import F
 from aiogram.enums import ChatType
 from aiogram.filters import Command
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 
 from database import User
 from handlers.mes.router import APIs, Mes, MesUser, isMesUser, router
 from octodiary.types.myschool.mobile import ShortHomeworks
+
+from inline.types import AdditionalButtons
 from utils.other import handler, sort_dict_by_date
 from utils.texts import Texts
 
@@ -56,10 +58,10 @@ def homeworks_info(homeworks: ShortHomeworks):
     F.chat.type == ChatType.PRIVATE
 )
 @handler()
-async def homeworks_upcoming(message: Message, apis: APIs, user: User):
+async def homeworks_upcoming(update: Message | CallbackQuery, apis: APIs, user: User):
     """Homeworks upcoming"""
 
-    response = await message.answer(Texts.LOADING)
+    response = await update.bot.inline.answer(update, Texts.LOADING)
 
     homeworks = await apis.mobile.get_homeworks_short(
         student_id=user.db_profile["children"][0]["id"],
@@ -68,9 +70,21 @@ async def homeworks_upcoming(message: Message, apis: APIs, user: User):
         to_date=(date.today() + timedelta(days=14))
     )
 
-    await message.bot.inline.list(
+    await update.bot.inline.list(
         update=response,
         row_width=5,
+        additional_buttons=AdditionalButtons(
+            below_buttons={
+                "text": Texts.Buttons.UPDATE,
+                "callback": homeworks_upcoming,
+                "kwargs": {
+                    "apis": apis,
+                    "user": user
+                },
+                "reusable": True,
+                "disable_deadline": True
+            }
+        ),
         **sort_dict_by_date(homeworks_info(homeworks)),
     )
 
@@ -89,10 +103,10 @@ async def homeworks_upcoming(message: Message, apis: APIs, user: User):
     F.chat.type == ChatType.PRIVATE
 )
 @handler()
-async def homeworks_past(message: Message, apis: APIs, user: User):
+async def homeworks_past(update: Message | CallbackQuery, apis: APIs, user: User):
     """Homeworks past"""
 
-    response = await message.answer(Texts.LOADING)
+    response = await update.bot.inline.answer(update, Texts.LOADING)
 
     homeworks = await apis.mobile.get_homeworks_short(
         student_id=user.db_profile["children"][0]["id"],
@@ -101,8 +115,20 @@ async def homeworks_past(message: Message, apis: APIs, user: User):
         to_date=date.today() - timedelta(days=1)
     )
 
-    await message.bot.inline.list(
+    await update.bot.inline.list(
         update=response,
         row_width=5,
+        additional_buttons=AdditionalButtons(
+            below_buttons={
+                "text": Texts.Buttons.UPDATE,
+                "callback": homeworks_past,
+                "kwargs": {
+                    "apis": apis,
+                    "user": user
+                },
+                "reusable": True,
+                "disable_deadline": True
+            }
+        ),
         **sort_dict_by_date(homeworks_info(homeworks), reverse=True)
     )

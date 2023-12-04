@@ -38,7 +38,7 @@ class BotInlineManager:
         @loop(60)
         async def loop_clear_maps(**kwargs):
             for data, callback in self.inline_buttons_map.copy().items():
-                if callback.delete_time <= datetime.now():
+                if callback.delete_time is not None and callback.delete_time <= datetime.now():
                     del self.inline_buttons_map[data]
 
         self.inline_buttons_map: dict[str, ButtonCallback] = {}
@@ -189,7 +189,7 @@ class BotInlineManager:
                             data=button["callback_data"],
                             text=button["text"],
                             callback=button["callback"],
-                            disable_deadline=disable_deadline,
+                            disable_deadline=disable_deadline or button.get("disable_deadline", False),
                             reusable=button.get("reusable", False),
                             delete_time=button.get("delete_time", None),
                             *button.get("args", ()),
@@ -536,7 +536,7 @@ class BotInlineManager:
                 types.InlineKeyboardMarkup,
                 types.ReplyKeyboardRemove,
                 types.ReplyKeyboardMarkup,
-            ]],
+            ]] = None,
             *,
             disable_deadline: bool = False,
             **kwargs

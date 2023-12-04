@@ -8,7 +8,7 @@ from datetime import date, timedelta
 from aiogram import F
 from aiogram.enums import ChatType
 from aiogram.filters import Command
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 
 from database import User
 from handlers.mes.router import APIs, Mes, MesUser, isMesUser, router
@@ -45,9 +45,9 @@ def visits_info(visits: Visits) -> str:
     F.chat.type == ChatType.PRIVATE
 )
 @handler()
-async def visits_cmd(update: Message, apis: APIs, user: User):
+async def visits_cmd(update: Message | CallbackQuery, apis: APIs, user: User):
     """Visits information"""
-    response = await update.answer(Texts.LOADING)
+    response = await update.bot.inline.answer(update, Texts.LOADING)
 
     try:
         today = date.today()
@@ -59,11 +59,23 @@ async def visits_cmd(update: Message, apis: APIs, user: User):
             to_date=today,
         )
     except APIError as e:
-        await response.edit_text(
-            Texts.API_ERROR(ERROR=e)
+        await update.bot.inline.answer(
+            response,
+            response=Texts.API_ERROR(ERROR=e)
         )
         return
     
-    return await response.edit_text(
-        visits_info(visits)
+    return await update.bot.inline.answer(
+        response,
+        response=visits_info(visits),
+        reply_markup={
+            "text": Texts.Buttons.UPDATE,
+            "callback": visits_cmd,
+            "kwargs": {
+                "user": user,
+                "apis": apis,
+            },
+            "reusable": True,
+            "disable_deadline": True
+        },
     )

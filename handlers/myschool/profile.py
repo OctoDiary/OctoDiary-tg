@@ -54,10 +54,10 @@ def profile_info(profile: FamilyProfile, from_db: str) -> str:
     F.chat.type == ChatType.PRIVATE
 )
 @handler()
-async def profile(update: Message | CallbackQuery, apis: APIs, user: User):
+async def profile_cmd(update: Message | CallbackQuery, apis: APIs, user: User):
     """Get profile"""
 
-    response = await update.answer(Texts.LOADING)
+    response = await update.bot.inline.answer(update, Texts.LOADING)
 
     from_db = ""
     try:
@@ -66,7 +66,20 @@ async def profile(update: Message | CallbackQuery, apis: APIs, user: User):
         profile = FamilyProfile.model_validate(user.db_profile)
         from_db = Texts.FROM_DB
 
-    await response.edit_text(text=profile_info(profile, from_db))
+    await update.bot.inline.answer(
+        response,
+        response=profile_info(profile, from_db),
+        reply_markup={
+            "text": Texts.Buttons.UPDATE,
+            "callback": profile_cmd,
+            "kwargs": {
+                "apis": apis,
+                "user": user
+            },
+            "reusable": True,
+            "disable_deadline": True
+        }
+    )
 
 
 @router.message(

@@ -9,7 +9,7 @@ from datetime import date, timedelta
 from aiogram import F
 from aiogram.enums import ChatType
 from aiogram.filters import Command
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 
 from database import User
 from handlers.mes.router import APIs, Mes, MesUser, isMesUser, router
@@ -17,6 +17,8 @@ from octodiary.types.mes.mobile.marks import Marks
 from octodiary.types.mes.mobile.marks import Payload as MarkPayloadItem
 from octodiary.types.mes.mobile.short_subject_marks import Payload as ShortSubjectPayloadItem
 from octodiary.types.mes.mobile.short_subject_marks import ShortSubjectMarks
+
+from inline.types import AdditionalButtons
 from utils.other import handler, pluralization_string, sort_dict_by_date
 from utils.other import mark as MARK
 from utils.texts import Texts
@@ -111,10 +113,10 @@ def marks_sorted_by_subject_info(marks_short: ShortSubjectMarks, goals: bool = F
     F.chat.type == ChatType.PRIVATE
 )
 @handler()
-async def marks_by_date(message: Message, apis: APIs, user: User):
+async def marks_by_date(update: Message | CallbackQuery, apis: APIs, user: User):
     """Marks users by date."""
 
-    response = await message.answer(Texts.LOADING)
+    response = await update.bot.inline.answer(update, Texts.LOADING)
 
     marks = await apis.mobile.get_marks(
         student_id=user.db_profile["children"][0]["id"],
@@ -123,9 +125,21 @@ async def marks_by_date(message: Message, apis: APIs, user: User):
         to_date=date.today(),
     )
 
-    await message.bot.inline.list(
+    await update.bot.inline.list(
         update=response,
         row_width=5,
+        additional_buttons=AdditionalButtons(
+            below_buttons={
+                "text": Texts.Buttons.UPDATE,
+                "callback": marks_by_date,
+                "kwargs": {
+                    "apis": apis,
+                    "user": user
+                },
+                "reusable": True,
+                "disable_deadline": True
+            }
+        ),
         **sort_dict_by_date(marks_sorted_by_date_info(marks), reverse=True)
     )
 
@@ -144,21 +158,33 @@ async def marks_by_date(message: Message, apis: APIs, user: User):
     F.chat.type == ChatType.PRIVATE
 )
 @handler()
-async def marks_by_subject(message: Message, apis: APIs, user: User):
+async def marks_by_subject(update: Message | CallbackQuery, apis: APIs, user: User):
     """Marks users by subject."""
 
-    response = await message.answer(Texts.LOADING)
+    response = await update.bot.inline.answer(update, Texts.LOADING)
 
     marks = await apis.mobile.get_subject_marks_short(
         student_id=user.db_profile["children"][0]["id"],
         profile_id=user.db_profile_id
     )
 
-    await message.bot.inline.list(
+    await update.bot.inline.list(
         update=response,
         row_width=2,
         strings=marks_sorted_by_subject_info(
             marks,
             user.db_settings.get("goals", False)
-        )
+        ),
+        additional_buttons=AdditionalButtons(
+            below_buttons={
+                "text": Texts.Buttons.UPDATE,
+                "callback": marks_by_subject,
+                "kwargs": {
+                    "apis": apis,
+                    "user": user
+                },
+                "reusable": True,
+                "disable_deadline": True
+            }
+        ),
     )

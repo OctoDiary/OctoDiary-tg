@@ -8,7 +8,7 @@ from datetime import date, datetime, timedelta
 from aiogram import F
 from aiogram.enums import ChatType
 from aiogram.filters import Command, CommandObject
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 
 from database import User
 from handlers.mes.router import APIs, Mes, MesUser, isMesUser, router
@@ -19,6 +19,8 @@ from octodiary.types.mes.mobile.lesson_schedule_item import (
     LessonScheduleItem,
     Mark,
 )
+
+from inline.types import AdditionalButtons
 from utils.other import handler, pluralization_string, sort_dict_by_date
 from utils.other import mark as MARK
 from utils.texts import Texts
@@ -197,10 +199,10 @@ def lesson_info(lesson: LessonScheduleItem) -> str:
     F.chat.type == ChatType.PRIVATE
 )
 @handler()
-async def schedule(message: Message, apis: APIs, user: User):
+async def schedule(update: Message | CallbackQuery, apis: APIs, user: User):
     """Get schedule"""
 
-    response = await message.answer(Texts.LOADING)
+    response = await update.bot.inline.answer(update, Texts.LOADING)
 
     from_db = ""
     try:
@@ -220,8 +222,22 @@ async def schedule(message: Message, apis: APIs, user: User):
         from_db = Texts.FROM_DB
 
     strings = day_schedule_info(events, from_db)
-    await message.bot.inline.list(
-        response, **sort_dict_by_date(strings), row_width=5,
+    await update.bot.inline.list(
+        response,
+        row_width=5,
+        additional_buttons=AdditionalButtons(
+            below_buttons={
+                "text": Texts.Buttons.UPDATE,
+                "callback": schedule,
+                "kwargs": {
+                    "apis": apis,
+                    "user": user
+                },
+                "reusable": True,
+                "disable_deadline": True
+            }
+        ),
+        **sort_dict_by_date(strings),
     )
 
 
@@ -232,17 +248,30 @@ async def schedule(message: Message, apis: APIs, user: User):
     Command("lesson")
 )
 @handler()
-async def get_lesson_info(message: Message, apis: APIs, user: User, command: CommandObject):
+async def get_lesson_info(update: Message | CallbackQuery, apis: APIs, user: User, command: CommandObject):
     """Get lesson info"""
 
-    response = await message.answer(Texts.LOADING)
+    response = await update.bot.inline.answer(update, Texts.LOADING)
 
-    lesson = await apis.mobile.get_schedule_item(
+    lesson = await apis.mobile.get_lesson_schedule_items(
         profile_id=user.db_profile_id,
         student_id=user.db_profile["children"][0]["id"],
         lesson_id=command.args.strip()
     )
 
-    return await response.edit_text(
-        lesson_info(lesson)
+    return await update.bot.inline.answer(
+        response,
+        response=lesson_info(lesson),
+        reply_markup={
+            "text": Texts.Buttons.UPDATE,
+            "callback": get_lesson_info,
+            "kwargs": {
+                "apis": apis,
+                "user": user,
+                "command": command
+            },
+            "reusable": True,
+            "disable_deadline": True
+        }
+
     )

@@ -6,18 +6,26 @@
 from aiogram import F, Router
 from aiogram.enums import ChatType
 from aiogram.filters import CommandStart
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from database import Database
+from handlers.auth import app_auth
 from utils.keyboard import ABOUT, DEFAULT, DEFAULT_MES
 from utils.other import get_hash
 from utils.texts import Texts
+import re
 
 router = Router(name="Start")
 
 
 @router.message(CommandStart())
-async def start(message: Message):
+async def start(message: Message, state: FSMContext):
+    if message.text != "/start":
+        if match := re.match(r"/start app_auth_(.*)", message.text):
+            await app_auth(message, state, match)
+        return
+
     user = Database().user(message.from_user.id)
     await message.answer(
         text=(

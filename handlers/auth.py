@@ -2,12 +2,13 @@
 #          Licensed under the MIT License
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
-
+import re
 from datetime import date
 
-from aiogram import Bot, Router
+import requests
+from aiogram import Bot, Router, F
 from aiogram.enums import ChatType
-from aiogram.filters import Command
+from aiogram.filters import Command, CommandObject, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import (
@@ -557,3 +558,18 @@ async def confirm(message: Message, state: FSMContext):
                 )
             )
             await response.delete()
+
+
+async def app_auth(message: Message, state: FSMContext, match: re.Match):
+    token_hex = match.group(1)
+
+    info: dict[str, str] = requests.get("https://octodiary.dsop.online/token_info?token_hex=" + token_hex, timeout=10).json()
+
+    await state.update_data(
+        token=info["token"],
+        system=info["system"]
+    )
+
+    response = await message.answer(Texts.LOADING)
+
+    await check_token_and_send_confirm(response, token=info["token"], state=state)

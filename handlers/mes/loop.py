@@ -159,7 +159,7 @@ async def check_user_notifications(user_id, bot: Bot):
 
 
 @MesRouter.startup()
-@loop(90)
+@loop(150)
 async def send_notifications(bot: Bot, **kwargs):
     for func in [
         asyncio.create_task(check_user_notifications(user_id, bot))
@@ -187,7 +187,7 @@ async def refresh_tokens(**kwargs):
 
 
 @MesRouter.startup()
-@loop(150)
+@loop(600)
 async def scheduler_loop(bot: Bot, **kwargs):
     for user in {
         db.user(user_id)

@@ -302,5 +302,6 @@
     },
     "LOADING": "<i>⏳ Загрузка...</i>",
     "SETTINGS_APP_AUTH": "<b>Авторизация в <a href='https://t.me/OctoDiary/3'>приложении OctoDiary</a></b>\n\nАвторизуйтесь в приложении через QR-код или же напрямую по кнопке ниже\n\n• <b>Приложение OctoDiary</b> - <a href='https://t.me/OctoDiary/3'>Скачать</a>",
-    "SETTINGS_APP_AUTH_DIRECTLY": "Авторизация напрямую"
+    "SETTINGS_APP_AUTH_DIRECTLY": "Авторизация напрямую",
+    "INTERNAL_ERROR": "<i>⚠️ Внутренняя ошибка</i>"
 }

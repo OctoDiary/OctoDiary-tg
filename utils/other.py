@@ -139,6 +139,7 @@ def handler(*, fsm: bool = False):
                     )
                 )
             except (Exception, BaseException) as e:
+                await update.bot.send_message(update.from_user.id, Texts.INTERNAL_ERROR)
                 logging.exception(e)
         return wrapper
     return decorator

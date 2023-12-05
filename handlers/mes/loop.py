@@ -113,6 +113,10 @@ async def check_user_notifications(user_id, bot: Bot):
     if user.db_notified_marks_ids is None:
         user.db_notified_marks_ids = {}
 
+    if user.notified_ids:
+        user.pop("notified_ids")
+        user.db_skip_notifications = True
+
     api = AsyncMobileAPI(token=user.token)
 
     if user.db_settings.get("notifications", {}).get("create_mark", False):

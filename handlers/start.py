@@ -50,8 +50,23 @@ async def start(message: Message, state: FSMContext):
 
 @router.message(F.text == Texts.Buttons.PROJECT_ABOUT)
 async def about(message: Message):
+    user = Database().user(message.from_user.id)
     await message.answer(
-        text=Texts.ABOUT_PROJECT(HASH=get_hash()),
+        text=(
+            Texts.ABOUT_PROJECT(HASH=get_hash())
+            + (
+                (
+                    Texts.ABOUT_MY_SCHOOL_PROJECT
+                    if user.system == Texts.Systems.MY_SCHOOL
+                    else Texts.ABOUT_MES_PROJECT
+                )
+                if user.token
+                else (
+                        Texts.ABOUT_MES_PROJECT
+                        + Texts.ABOUT_MY_SCHOOL_PROJECT
+                )
+            )
+        ),
         reply_markup=ABOUT,
         disable_web_page_preview=True
     )

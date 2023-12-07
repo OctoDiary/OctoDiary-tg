@@ -80,7 +80,7 @@ AUTH_LOGIN_TYPE_MY_SCHOOL = ReplyKeyboardMarkup(keyboard=[
 
 AUTH_LOGIN_TYPE_MES = ReplyKeyboardMarkup(keyboard=[
     [
-        KeyboardButton(text=Texts.LoginAndPassword)
+        KeyboardButton(text=Texts.MosRu)
     ],
     [
         KeyboardButton(text=Texts.AUPD_TOKEN)

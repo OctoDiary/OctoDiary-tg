@@ -6,9 +6,9 @@ import re
 from datetime import date
 
 import requests
-from aiogram import Bot, Router, F
+from aiogram import Bot, Router
 from aiogram.enums import ChatType
-from aiogram.filters import Command, CommandObject, CommandStart
+from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import (
@@ -146,7 +146,7 @@ async def set_system(message: Message, state: FSMContext):
 @auth_router.message(Form.auth_type, AuthFilter())
 async def set_login_type(message: Message, state: FSMContext):
     match message.text:
-        case Texts.LoginAndPassword:
+        case Texts.LoginAndPassword | Texts.MosRu:
             await state.update_data(login_type=Texts.LoginTypes.LoginAndPassword)
             await state.set_state(Form.username)
             await message.answer(

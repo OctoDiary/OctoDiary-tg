@@ -6,7 +6,7 @@ import re
 from datetime import date
 
 import requests
-from aiogram import Bot, Router
+from aiogram import Bot, Router, F
 from aiogram.enums import ChatType
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -15,8 +15,7 @@ from aiogram.types import (
     BufferedInputFile,
     CallbackQuery,
     InputMediaPhoto,
-    Message,
-    ReplyKeyboardRemove,
+    Message, ReplyKeyboardRemove,
 )
 
 from database import Database
@@ -28,7 +27,8 @@ from octodiary.exceptions import APIError
 from octodiary.types.captcha import Captcha
 from octodiary.types.enter_sms_code import EnterSmsCode
 from utils.filters import AuthFilter
-from utils.keyboard import AUTH_LOGIN_TYPE_MES, AUTH_LOGIN_TYPE_MY_SCHOOL, AUTH_SYSTEMS, DEFAULT, DEFAULT_MES, YES_OR_NO
+from utils.keyboard import AUTH_LOGIN_TYPE_MES, AUTH_LOGIN_TYPE_MY_SCHOOL, AUTH_SYSTEMS, DEFAULT, DEFAULT_MES, \
+    YES_OR_NO, CANCEL
 from utils.other import get_hash, pluralization_string
 from utils.texts import Texts
 
@@ -48,6 +48,15 @@ class Form(StatesGroup):
     blitz_otp = State()
 
     confirm = State()
+
+
+@auth_router.message(F.text == Texts.Buttons.CANCEL)
+async def cancel(message: Message, state: FSMContext):
+    await state.clear()
+    await message.answer(
+        text=Texts.Authorization.CANCEL,
+        reply_markup=ReplyKeyboardRemove()
+    )
 
 
 async def check_token_and_send_confirm(message: Message, token: str, state: FSMContext):
@@ -158,14 +167,14 @@ async def set_login_type(message: Message, state: FSMContext):
                     HASH=get_hash()
                 ),
                 disable_web_page_preview=True,
-                reply_markup=ReplyKeyboardRemove()
+                reply_markup=CANCEL
             )
         case Texts.Gosuslugi:
             if (await state.get_data()).get("system") == Texts.Systems.MES:
                 await state.clear()
                 await message.answer(
                     Texts.Authorization.NOT_SUPPORTED,
-                    reply_markup=ReplyKeyboardRemove()
+                reply_markup=CANCEL
                 )
                 return
 
@@ -176,19 +185,19 @@ async def set_login_type(message: Message, state: FSMContext):
                     HASH=get_hash()
                 ),
                 disable_web_page_preview=True,
-                reply_markup=ReplyKeyboardRemove()
+                reply_markup=CANCEL
             )
         case Texts.AUPD_TOKEN:
             await state.set_state(Form.token)
             await message.answer(
                 Texts.Authorization.ENTER_TOKEN,
-                reply_markup=ReplyKeyboardRemove(),
+                reply_markup=CANCEL
             )
 
 
 @auth_router.message(Form.token, AuthFilter())
 async def set_token(message: Message, state: FSMContext):
-    response = await message.answer(Texts.LOADING)
+    response = await message.answer(Texts.LOADING, reply_markup=CANCEL)
 
     await check_token_and_send_confirm(response, token=message.text, state=state)
 
@@ -206,7 +215,8 @@ async def set_username(message: Message, state: FSMContext):
             if data["system"] == Texts.Systems.MY_SCHOOL
             else Texts.Authorization.MES_ENTER_PASSWORD
         )(HASH=get_hash()),
-        disable_web_page_preview=True
+        disable_web_page_preview=True,
+        reply_markup=CANCEL
     )
 
 
@@ -288,7 +298,7 @@ async def send_captcha(
         bot: Bot
 ):
     if response.question:
-        await message.answer(text=Texts.Authorization.RESOLVE_CAPTCHA(QUESTION=response.question))
+        await message.answer(text=Texts.Authorization.RESOLVE_CAPTCHA(QUESTION=response.question), reply_markup=CANCEL)
     else:
         await message.answer_photo(
             photo=BufferedInputFile(response.image_bytes, Texts.Variables.CAPTCHA_IMAGE_FILENAME),
@@ -329,10 +339,11 @@ async def send_mfa_user_request(
         phone = api._mfa_details["otp_details"]["phone"]
         await message.answer(
             text=Texts.Authorization.MFA_ENTER_OTP(PHONE=phone),
-            parse_mode="HTML"
+            parse_mode="HTML",
+            reply_markup=CANCEL
         )
     else:
-        await message.answer(text=Texts.Authorization.MFA_ENTER_TTP)
+        await message.answer(text=Texts.Authorization.MFA_ENTER_TTP, reply_markup=CANCEL)
 
 
 
@@ -355,7 +366,7 @@ async def set_password(message: Message, state: FSMContext, bot: Bot):
                     await state.update_data(username=None, password=None)
                     await state.set_state(Form.username)
                     await message.answer(
-                        Texts.Authorization.INVALID_PASSWORD
+                        Texts.Authorization.INVALID_PASSWORD, reply_markup=CANCEL
                     )
                 else:
                     await state.clear()
@@ -370,7 +381,7 @@ async def set_password(message: Message, state: FSMContext, bot: Bot):
                     await state.set_state(Form.gosuslugi_mfa)
                     await send_mfa_user_request(api=api, message=message)
                 else:
-                    response_msg = await message.answer(Texts.LOADING)
+                    response_msg = await message.answer(Texts.LOADING, reply_markup=CANCEL)
                     await check_token_and_send_confirm(response_msg, response, state)
         case Texts.Systems.MES:
             api = MESMobileAPI()
@@ -382,7 +393,7 @@ async def set_password(message: Message, state: FSMContext, bot: Bot):
                         await state.update_data(username=None, password=None)
                         await state.set_state(Form.username)
                         await message.answer(
-                            Texts.Authorization.INVALID_PASSWORD
+                            Texts.Authorization.INVALID_PASSWORD, reply_markup=CANCEL
                         )
                         return
                     case "TemporarilyBlocked":
@@ -406,17 +417,17 @@ async def set_password(message: Message, state: FSMContext, bot: Bot):
                     phone = "+" + response.contact[0:4] + "*****" + response.contact[-2:]
                     await message.answer(
                         text=Texts.Authorization.BLITZ_SEND_CODE(PHONE=phone),
-                        parse_mode="HTML"
+                        parse_mode="HTML", reply_markup=CANCEL
                     )
                 else:
-                    response_msg = await message.answer(Texts.LOADING)
+                    response_msg = await message.answer(Texts.LOADING, reply_markup=CANCEL)
                     await check_token_and_send_confirm(response_msg, response, state)
 
 
 @auth_router.message(Form.gosuslugi_mfa)
 async def set_gosuslugi_mfa(message: Message, state: FSMContext, bot: Bot):
     if not message.text.isdigit() or len(message.text) != 6:
-        await message.answer(text=Texts.Authorization.INVALID_MFA_ENTER_AGAIN)
+        await message.answer(text=Texts.Authorization.INVALID_MFA_ENTER_AGAIN, reply_markup=CANCEL)
         return
 
     data = await state.get_data()
@@ -436,7 +447,7 @@ async def set_gosuslugi_mfa(message: Message, state: FSMContext, bot: Bot):
             await state.set_state(Form.gosuslugi_captcha)
             await send_captcha(response=response, message=message, bot=bot)
         else:
-            response_msg = await message.answer(Texts.LOADING)
+            response_msg = await message.answer(Texts.LOADING, reply_markup=CANCEL)
             await check_token_and_send_confirm(response_msg, response, state)
 
 
@@ -456,7 +467,7 @@ async def asnwer_gosuslugi_captcha(message: Message, state: FSMContext, bot: Bot
             await state.update_data(username=None, password=None)
             await state.set_state(Form.username)
             await message.answer(
-                Texts.Authorization.INVALID_PASSWORD
+                Texts.Authorization.INVALID_PASSWORD, reply_markup=CANCEL
             )
         else:
             await state.clear()
@@ -470,14 +481,14 @@ async def asnwer_gosuslugi_captcha(message: Message, state: FSMContext, bot: Bot
             await state.set_state(Form.gosuslugi_mfa)
             await send_mfa_user_request(api=api, message=message)
         else:
-            response_msg = await message.answer(Texts.LOADING)
+            response_msg = await message.answer(Texts.LOADING, reply_markup=CANCEL)
             await check_token_and_send_confirm(response_msg, response, state)
 
 
 @auth_router.message(Form.blitz_otp)
 async def set_blitz_otp(message: Message, state: FSMContext):
     if not message.text.isdigit() or len(message.text) != 6:
-        await message.answer(text=Texts.Authorization.INVALID_MFA_ENTER_AGAIN)
+        await message.answer(text=Texts.Authorization.INVALID_MFA_ENTER_AGAIN, reply_markup=CANCEL)
         return
 
     data = await state.get_data()
@@ -490,16 +501,17 @@ async def set_blitz_otp(message: Message, state: FSMContext):
             case "InvalidOTP":
                 await message.answer(text=Texts.Authorization.BLITZ_INVALID_CODE(
                     ATTEMPTS=pluralization_string(e.details["remain_attempts"], ["попытка", "попытки", "попыток"]),
-                    TTL=pluralization_string(e.details["ttl"], ["секунда", "секунды", "секунд"])
+                    TTL=pluralization_string(e.details["ttl"], ["секунда", "секунды", "секунд"]),
+                    reply_markup=CANCEL
                 ))
             case "NoAttempts" | "CodeExpired":
-                await message.answer(text=Texts.Authorization.BLITZ_CODE_EXPIRED)
+                await message.answer(text=Texts.Authorization.BLITZ_CODE_EXPIRED, reply_markup=CANCEL)
             case _:
                 await state.clear()
                 await message.answer(text=Texts.Authorization.ERROR_TRY_AGAIN(ERROR=str(e)))
                 raise e
     else:
-        response_msg = await message.answer(Texts.LOADING)
+        response_msg = await message.answer(Texts.LOADING, reply_markup=CANCEL)
         await check_token_and_send_confirm(response_msg, response, state)
 
 
@@ -510,10 +522,10 @@ async def confirm(message: Message, state: FSMContext):
             await state.clear()
             await message.answer(
                 text=Texts.Authorization.NOT_CONFIRM,
-                reply_markup=ReplyKeyboardRemove()
+                reply_markup=CANCEL
             )
         case Texts.YES:
-            response = await message.answer(Texts.LOADING)
+            response = await message.answer(Texts.LOADING, reply_markup=CANCEL)
             data = await state.get_data()
             db = Database()
             user = db.user(str(message.from_user.id))
@@ -570,6 +582,6 @@ async def app_auth(message: Message, state: FSMContext, match: re.Match):
         system=info["system"]
     )
 
-    response = await message.answer(Texts.LOADING)
+    response = await message.answer(Texts.LOADING, reply_markup=CANCEL)
 
     await check_token_and_send_confirm(response, token=info["token"], state=state)

@@ -113,3 +113,10 @@ ABOUT = InlineKeyboardMarkup(inline_keyboard=[
         InlineKeyboardButton(text="Den4ikSuperOstryyPer4ik", url=Texts.Buttons.Den4ikSuperOstryyPer4ik_URL),
     ]
 ])
+
+
+CANCEL = ReplyKeyboardMarkup(keyboard=[
+    [
+        KeyboardButton(text=Texts.Buttons.CANCEL)
+    ]
+], resize_keyboard=True, selective=True)

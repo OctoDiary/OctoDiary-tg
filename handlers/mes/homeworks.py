@@ -58,10 +58,13 @@ def homeworks_info(homeworks: ShortHomeworks):
     F.chat.type == ChatType.PRIVATE
 )
 @handler()
-async def homeworks_upcoming(update: Message | CallbackQuery, apis: APIs, user: User):
+async def homeworks_upcoming(update: Message | CallbackQuery, apis: APIs, user: User, *, is_inline: bool = False):
     """Homeworks upcoming"""
 
-    response = await update.bot.inline.answer(update, Texts.LOADING)
+    if not is_inline:
+        response = await update.bot.inline.answer(update, Texts.LOADING)
+    else:
+        response = update
 
     homeworks = await apis.mobile.get_homeworks_short(
         student_id=user.db_profile["children"][0]["id"],
@@ -79,7 +82,8 @@ async def homeworks_upcoming(update: Message | CallbackQuery, apis: APIs, user: 
                 "callback": homeworks_upcoming,
                 "kwargs": {
                     "apis": apis,
-                    "user": user
+                    "user": user,
+                    "is_inline": is_inline
                 },
                 "reusable": True,
                 "disable_deadline": True
@@ -87,6 +91,9 @@ async def homeworks_upcoming(update: Message | CallbackQuery, apis: APIs, user: 
         ),
         **sort_dict_by_date(homeworks_info(homeworks)),
     )
+
+    if isinstance(update, CallbackQuery):
+        await update.answer(Texts.UPDATED)
 
 
 @router.message(
@@ -103,10 +110,13 @@ async def homeworks_upcoming(update: Message | CallbackQuery, apis: APIs, user: 
     F.chat.type == ChatType.PRIVATE
 )
 @handler()
-async def homeworks_past(update: Message | CallbackQuery, apis: APIs, user: User):
+async def homeworks_past(update: Message | CallbackQuery, apis: APIs, user: User, *, is_inline: bool = False):
     """Homeworks past"""
 
-    response = await update.bot.inline.answer(update, Texts.LOADING)
+    if not is_inline:
+        response = await update.bot.inline.answer(update, Texts.LOADING)
+    else:
+        response = update
 
     homeworks = await apis.mobile.get_homeworks_short(
         student_id=user.db_profile["children"][0]["id"],
@@ -124,7 +134,8 @@ async def homeworks_past(update: Message | CallbackQuery, apis: APIs, user: User
                 "callback": homeworks_past,
                 "kwargs": {
                     "apis": apis,
-                    "user": user
+                    "user": user,
+                    "is_inline": is_inline
                 },
                 "reusable": True,
                 "disable_deadline": True
@@ -132,3 +143,6 @@ async def homeworks_past(update: Message | CallbackQuery, apis: APIs, user: User
         ),
         **sort_dict_by_date(homeworks_info(homeworks), reverse=True)
     )
+
+    if isinstance(update, CallbackQuery):
+        await update.answer(Texts.UPDATED)

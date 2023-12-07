@@ -45,9 +45,12 @@ def visits_info(visits: Visits) -> str:
     F.chat.type == ChatType.PRIVATE
 )
 @handler()
-async def visits_cmd(update: Message | CallbackQuery, apis: APIs, user: User):
+async def visits_cmd(update: Message | CallbackQuery, apis: APIs, user: User, *, is_inline: bool = False):
     """Visits information"""
-    response = await update.bot.inline.answer(update, Texts.LOADING)
+    if not is_inline:
+        response = await update.bot.inline.answer(update, Texts.LOADING)
+    else:
+        response = update
 
     try:
         today = date.today()
@@ -65,7 +68,7 @@ async def visits_cmd(update: Message | CallbackQuery, apis: APIs, user: User):
         )
         return
     
-    return await update.bot.inline.answer(
+    await update.bot.inline.answer(
         response,
         response=visits_info(visits),
         reply_markup={
@@ -74,8 +77,12 @@ async def visits_cmd(update: Message | CallbackQuery, apis: APIs, user: User):
             "kwargs": {
                 "user": user,
                 "apis": apis,
+                "is_inline": is_inline
             },
             "reusable": True,
             "disable_deadline": True
         },
     )
+
+    if isinstance(update, CallbackQuery):
+        await update.answer(Texts.UPDATED)

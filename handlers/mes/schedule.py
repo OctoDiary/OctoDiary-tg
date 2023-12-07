@@ -4,6 +4,7 @@
 #           https://github.com/OctoDiary
 
 from datetime import date, datetime, timedelta
+from typing import Optional
 
 from aiogram import F
 from aiogram.enums import ChatType
@@ -199,10 +200,13 @@ def lesson_info(lesson: LessonScheduleItem) -> str:
     F.chat.type == ChatType.PRIVATE
 )
 @handler()
-async def schedule(update: Message | CallbackQuery, apis: APIs, user: User):
+async def schedule(update: Message | CallbackQuery, apis: APIs, user: User, *, is_inline: bool = False):
     """Get schedule"""
 
-    response = await update.bot.inline.answer(update, Texts.LOADING)
+    if not is_inline:
+        response = await update.bot.inline.answer(update, Texts.LOADING)
+    else:
+        response = update
 
     from_db = ""
     try:
@@ -221,7 +225,7 @@ async def schedule(update: Message | CallbackQuery, apis: APIs, user: User):
         events = user.db_events
         from_db = Texts.FROM_DB
 
-    strings = day_schedule_info(events, from_db)
+    strings = day_schedule_info(events, from_db, inline=is_inline)
     await update.bot.inline.list(
         response,
         row_width=5,
@@ -231,7 +235,8 @@ async def schedule(update: Message | CallbackQuery, apis: APIs, user: User):
                 "callback": schedule,
                 "kwargs": {
                     "apis": apis,
-                    "user": user
+                    "user": user,
+                    "is_inline": is_inline
                 },
                 "reusable": True,
                 "disable_deadline": True
@@ -239,6 +244,9 @@ async def schedule(update: Message | CallbackQuery, apis: APIs, user: User):
         ),
         **sort_dict_by_date(strings),
     )
+
+    if isinstance(update, CallbackQuery):
+        await update.answer(Texts.UPDATED)
 
 
 @router.message(
@@ -248,18 +256,29 @@ async def schedule(update: Message | CallbackQuery, apis: APIs, user: User):
     Command("lesson")
 )
 @handler()
-async def get_lesson_info(update: Message | CallbackQuery, apis: APIs, user: User, command: CommandObject):
+async def get_lesson_info(
+        update: Message | CallbackQuery,
+        apis: APIs,
+        user: User,
+        command: CommandObject,
+        lesson_id: Optional[str] = None,
+        *,
+        is_inline: bool = False
+):
     """Get lesson info"""
 
-    response = await update.bot.inline.answer(update, Texts.LOADING)
+    if not is_inline:
+        response = await update.bot.inline.answer(update, Texts.LOADING)
+    else:
+        response = update
 
     lesson = await apis.mobile.get_lesson_schedule_items(
         profile_id=user.db_profile_id,
         student_id=user.db_profile["children"][0]["id"],
-        lesson_id=command.args.strip()
+        lesson_id=command.args.strip() if command else lesson_id
     )
 
-    return await update.bot.inline.answer(
+    await update.bot.inline.answer(
         response,
         response=lesson_info(lesson),
         reply_markup={
@@ -268,10 +287,15 @@ async def get_lesson_info(update: Message | CallbackQuery, apis: APIs, user: Use
             "kwargs": {
                 "apis": apis,
                 "user": user,
-                "command": command
+                "command": command,
+                "lesson_id": lesson_id,
+                "is_inline": is_inline
             },
             "reusable": True,
             "disable_deadline": True
         }
 
     )
+
+    if isinstance(update, CallbackQuery):
+        await update.answer(Texts.UPDATED)

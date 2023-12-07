@@ -54,10 +54,13 @@ def profile_info(profile: FamilyProfile, from_db: str) -> str:
     F.chat.type == ChatType.PRIVATE
 )
 @handler()
-async def profile_cmd(update: Message | CallbackQuery, apis: APIs, user: User):
+async def profile_cmd(update: Message | CallbackQuery, apis: APIs, user: User, *, is_inline: bool = False):
     """Get profile"""
 
-    response = await update.bot.inline.answer(update, Texts.LOADING)
+    if not is_inline:
+        response = await update.bot.inline.answer(update, Texts.LOADING)
+    else:
+        response = update
 
     from_db = ""
     try:
@@ -74,12 +77,16 @@ async def profile_cmd(update: Message | CallbackQuery, apis: APIs, user: User):
             "callback": profile_cmd,
             "kwargs": {
                 "apis": apis,
-                "user": user
+                "user": user,
+                "is_inline": is_inline
             },
             "reusable": True,
             "disable_deadline": True
         }
     )
+
+    if isinstance(update, CallbackQuery):
+        await update.answer(Texts.UPDATED)
 
 
 @router.message(

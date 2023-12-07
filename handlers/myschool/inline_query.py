@@ -18,14 +18,17 @@ from aiogram.types import (
 )
 
 from database import User
-from handlers.myschool.homeworks import homeworks_info
-from handlers.myschool.marks import marks_sorted_by_date_info, marks_sorted_by_subject_info
-from handlers.myschool.profile import profile_info
+from handlers.myschool.homeworks import homeworks_info, homeworks_past, homeworks_upcoming
+from handlers.myschool.marks import marks_sorted_by_date_info, marks_sorted_by_subject_info, marks_by_date, \
+    marks_by_subject
+from handlers.myschool.profile import profile_info, profile_cmd
 from handlers.myschool.router import APIs, MySchool, MySchoolUser, isMySchoolUser, router
-from handlers.myschool.schedule import day_schedule_info, lesson_info
+from handlers.myschool.schedule import day_schedule_info, lesson_info, schedule, get_lesson_info
 from handlers.myschool.settings import TEXT, markup
 from octodiary.exceptions import APIError
 from octodiary.types.myschool.mobile import FamilyProfile
+
+from inline.types import AdditionalButtons
 from utils.other import handler, sort_dict_by_date
 from utils.texts import Texts
 
@@ -100,6 +103,19 @@ async def schedule_load(update: ChosenInlineResult, bot: Bot, user: User, apis: 
 
     await bot.inline.list(
         update,
+        additional_buttons=AdditionalButtons(
+            below_buttons={
+                "text": Texts.Buttons.UPDATE,
+                "callback": schedule,
+                "kwargs": {
+                    "apis": apis,
+                    "user": user,
+                    "is_inline": True
+                },
+                "reusable": True,
+                "disable_deadline": True
+            }
+        ),
         **sort_dict_by_date(
             dictionary=day_schedule_info(events, from_db, inline=True)
         ),
@@ -131,7 +147,20 @@ async def profile_load(update: ChosenInlineResult, bot: Bot, user: User, apis: A
 
     await bot.edit_message_text(
         text=profile_info(profile, from_db),
-        inline_message_id=update.inline_message_id
+        inline_message_id=update.inline_message_id,
+        reply_markup=bot.inline.generate_markup(
+            {
+                "text": Texts.Buttons.UPDATE,
+                "callback": profile_cmd,
+                "kwargs": {
+                    "apis": apis,
+                    "user": user,
+                    "is_inline": True
+                },
+                "reusable": True,
+                "disable_deadline": True
+            }
+        )
     )
 
 
@@ -160,6 +189,19 @@ async def homeworks_upcoming_load(update: ChosenInlineResult, bot: Bot, user: Us
     await bot.inline.list(
         update=update,
         row_width=5,
+        additional_buttons=AdditionalButtons(
+            below_buttons={
+                "text": Texts.Buttons.UPDATE,
+                "callback": homeworks_upcoming,
+                "kwargs": {
+                    "apis": apis,
+                    "user": user,
+                    "is_inline": True
+                },
+                "reusable": True,
+                "disable_deadline": True
+            }
+        ),
         **sort_dict_by_date(homeworks_info(homeworks)),
     )
 
@@ -189,6 +231,19 @@ async def homeworks_past_load(update: ChosenInlineResult, bot: Bot, user: User, 
     await bot.inline.list(
         update=update,
         row_width=5,
+        additional_buttons=AdditionalButtons(
+            below_buttons={
+                "text": Texts.Buttons.UPDATE,
+                "callback": homeworks_past,
+                "kwargs": {
+                    "apis": apis,
+                    "user": user,
+                    "is_inline": True
+                },
+                "reusable": True,
+                "disable_deadline": True
+            }
+        ),
         **sort_dict_by_date(homeworks_info(homeworks), reverse=True),
     )
 
@@ -218,6 +273,19 @@ async def marks_by_date_load(update: ChosenInlineResult, bot: Bot, user: User, a
     await bot.inline.list(
         update=update,
         row_width=5,
+        additional_buttons=AdditionalButtons(
+            below_buttons={
+                "text": Texts.Buttons.UPDATE,
+                "callback": marks_by_date,
+                "kwargs": {
+                    "apis": apis,
+                    "user": user,
+                    "is_inline": True
+                },
+                "reusable": True,
+                "disable_deadline": True
+            }
+        ),
         **sort_dict_by_date(marks_sorted_by_date_info(marks), reverse=True),
     )
 
@@ -248,7 +316,20 @@ async def marks_by_subject_load(update: ChosenInlineResult, bot: Bot, user: User
         strings=marks_sorted_by_subject_info(
             marks,
             user.db_settings.get("goals", False)
-        )
+        ),
+        additional_buttons=AdditionalButtons(
+            below_buttons={
+                "text": Texts.Buttons.UPDATE,
+                "callback": marks_by_subject,
+                "kwargs": {
+                    "apis": apis,
+                    "user": user,
+                    "is_inline": True
+                },
+                "reusable": True,
+                "disable_deadline": True
+            }
+        ),
     )
 
 
@@ -344,5 +425,19 @@ async def lesson_info_load(update: ChosenInlineResult, bot: Bot, user: User, api
 
     return await bot.edit_message_text(
         text=lesson_info(lesson),
-        inline_message_id=update.inline_message_id
+        inline_message_id=update.inline_message_id,
+        reply_markup=bot.inline.generate_markup(
+            {
+                "text": Texts.Buttons.UPDATE,
+                "callback": get_lesson_info,
+                "kwargs": {
+                    "apis": apis,
+                    "user": user,
+                    "lesson_id": match.group(1),
+                    "is_inline": True
+                },
+                "reusable": True,
+                "disable_deadline": True
+            }
+        )
     )

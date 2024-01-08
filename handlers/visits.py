@@ -3,18 +3,20 @@
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
 
-from datetime import date, timedelta
+from datetime import timedelta
 
 from aiogram import F
 from aiogram.enums import ChatType
 from aiogram.filters import Command
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import CallbackQuery, Message
 
-from database import User
-from handlers.mes.router import APIs, Mes, MesUser, isMesUser, router
+from apis import MesAPIs
+from database import Database, User
+from handlers.router import router
 from octodiary.exceptions import APIError
 from octodiary.types.mes.mobile import Visits
-from utils.other import handler
+from utils.filters import apis_and_user
+from utils.other import get_date, handler
 from utils.texts import Texts
 
 
@@ -32,20 +34,17 @@ def visits_info(visits: Visits) -> str:
 
 
 @router.message(
-    F.func(isMesUser),
-    Command("visits"),
-    F.func(MesUser).as_("user"),
-    F.func(Mes).as_("apis"),
+    F.func(lambda message: Database().user(message.from_user.id).system == "mes"),
+    Command("visits")
 )
 @router.message(
-    F.func(isMesUser),
-    F.text == "Посещение",
-    F.func(MesUser).as_("user"),
-    F.func(Mes).as_("apis"),
+    F.func(lambda message: Database().user(message.from_user.id).system == "mes"),
+    F.text == Texts.Buttons.VISITS,
     F.chat.type == ChatType.PRIVATE
 )
 @handler()
-async def visits_cmd(update: Message | CallbackQuery, apis: APIs, user: User, *, is_inline: bool = False):
+@apis_and_user
+async def visits_cmd(update: Message | CallbackQuery, apis: MesAPIs, user: User, *, is_inline: bool = False):
     """Visits information"""
     if not is_inline:
         response = await update.bot.inline.answer(update, Texts.LOADING)
@@ -53,11 +52,11 @@ async def visits_cmd(update: Message | CallbackQuery, apis: APIs, user: User, *,
         response = update
 
     try:
-        today = date.today()
+        today = get_date()
         visits = await apis.mobile.get_visits(
             profile_id=user.db_profile_id,
-            student_id=user.db_profile["children"][0]["id"],
-            contract_id=user.db_profile["children"][0]["contract_id"],
+            student_id=user.db_current_child["id"] if user.db_current_child else user.db_profile["children"][0]["id"],
+            contract_id=user.db_current_child["contract_id"] if user.db_current_child else user.db_profile["children"][0]["contract_id"],
             from_date=today - timedelta(days=14),
             to_date=today,
         )

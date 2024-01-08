@@ -3,16 +3,18 @@
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
 
+from handlers import homeworks, inline_query, marks, profile, schedule, scheduler, settings, visits
 from handlers.admins import AdminRouter
 from handlers.auth import auth_router as AuthRouter
-from handlers.mes import MesRouter
-from handlers.myschool import MySchoolRouter
+from handlers.loop import LoopRouter
+from handlers.router import router as UserRouter
 from handlers.start import router as StartRouter
 
 routers = [
     AdminRouter,
     AuthRouter,
     StartRouter,
-    MySchoolRouter,
-    MesRouter,
+    LoopRouter,
+    UserRouter,
 ]
+

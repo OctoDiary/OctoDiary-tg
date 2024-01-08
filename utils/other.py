@@ -10,7 +10,7 @@ import os
 import re
 import signal
 import sys
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Union
 
 from aiogram import types
@@ -66,15 +66,18 @@ def handler(*, fsm: bool = False):
 
             """
             # Skip func if there is no user or apis
-            func_params = inspect.signature(func).parameters
-            if (
-                "user" in func_params
-                and not kwargs.get("user")
-            ) or (
-                "apis" in func_params
-                and not kwargs.get("apis")
-            ):
-                return
+            func_params = list(inspect.signature(func).parameters.keys())
+            if func_params == ["args", "kwargs"]:
+                func_params = func.params
+            else:
+                if (
+                    "user" in func_params
+                    and not kwargs.get("user")
+                ) or (
+                    "apis" in func_params
+                    and not kwargs.get("apis")
+                ):
+                    return
 
             # Check if the bot is closed in the database
             if Database().closed:
@@ -105,7 +108,6 @@ def handler(*, fsm: bool = False):
                 )
 
             try:
-
                 # Call the decorated function
                 return await func(update, *args, **{
                     attr: value
@@ -256,3 +258,10 @@ def get_hash():
         return f'<a href="https://github.com/OctoDiary/OctoDiary-tg/commit/{hash_}">#{hash_[:7]}</a>'
     except Exception:
         return "<a href='https://github.com/OctoDiary/OctoDiary-tg'>#last-commit</a>"
+
+
+TIMEZONE = timezone(timedelta(hours=3), "MSK")
+
+
+def get_date():
+    return datetime.now(tz=TIMEZONE).date()

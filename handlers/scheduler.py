@@ -3,30 +3,28 @@
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
 
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 
-from aiogram import Bot, F
+from aiogram import Bot
 from aiogram.enums import ChatMemberStatus, ChatType
 from aiogram.filters import Command
 from aiogram.types import Message
 
+from apis import MesAPIs, MySchoolAPIs
 from database import User
-from handlers.mes.router import APIs, Mes, MesUser, isMesUser, router
-from handlers.mes.schedule import day_schedule_info
+from handlers.router import router
+from handlers.schedule import day_schedule_info
 from octodiary.exceptions import APIError
-from utils.other import handler, sort_dict_by_date
+from utils.filters import apis_and_user
+from utils.other import TIMEZONE, get_date, handler, sort_dict_by_date
 from utils.texts import Texts
 
 
-@router.message(
-    F.func(isMesUser),
-    F.func(MesUser).as_("user"),
-    F.func(Mes).as_("apis"),
-    Command("enable_scheduler")
-)
+@router.message(Command("enable_scheduler"))
 @handler()
-async def enable_scheduler_cmd(message: Message, apis: APIs, user: User, bot: Bot):
-    """Enable scheduler in current chat"""
+@apis_and_user
+async def enable_scheduler_cmd(message: Message, apis: MesAPIs | MySchoolAPIs, user: User, bot: Bot):
+    """Enable scheduler for current chat"""
 
     if message.chat.type == ChatType.PRIVATE:
         await message.answer(
@@ -68,15 +66,11 @@ async def enable_scheduler_cmd(message: Message, apis: APIs, user: User, bot: Bo
     )
 
 
-@router.message(
-    F.func(isMesUser),
-    F.func(MesUser).as_("user"),
-    F.func(Mes),
-    Command("disable_scheduler")
-)
+@router.message(Command("disable_scheduler"))
 @handler()
+@apis_and_user
 async def disable_scheduler_cmd(message: Message, user: User):
-    """Disable scheduler in current chat"""
+    """Disable scheduler for current chat"""
 
     if message.chat.type == ChatType.PRIVATE:
         await message.answer(
@@ -105,7 +99,7 @@ async def disable_scheduler_cmd(message: Message, user: User):
 
 async def run_scheduler_for_chat(
         chat_id: str,
-        apis: APIs,
+        apis: MesAPIs | MySchoolAPIs,
         user: User,
         bot: Bot,
         *,
@@ -119,11 +113,11 @@ async def run_scheduler_for_chat(
         return _message
 
     try:
-        today = date.today()
+        today = get_date()
         weekday = today.weekday()
         weeks = [
             await apis.mobile.get_events(
-                person_id=user.db_profile["children"][0]["contingent_guid"],
+                person_id=user.db_current_child["contingent_guid"] if user.db_current_child else profile["children"][0]["contingent_guid"],
                 mes_role=user.db_profile["profile"]["type"],
                 begin_date=(
                     today - timedelta(days=x)
@@ -162,7 +156,7 @@ async def run_scheduler_for_chat(
                         from_user=(
                             await bot.get_me()
                         ),
-                        date=datetime.now(),
+                        date=datetime.now(tz=TIMEZONE),
                         **scheduler_info.get("weeks_messages", {})[str(index)]
                     )
                 )

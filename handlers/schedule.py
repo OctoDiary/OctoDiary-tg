@@ -3,28 +3,36 @@
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
 
-from datetime import date, datetime, timedelta
-from typing import Optional
+from datetime import datetime, timedelta
+from typing import Optional, Union
 
 from aiogram import F
 from aiogram.enums import ChatType
 from aiogram.filters import Command, CommandObject
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import CallbackQuery, Message
 
+import api
+from apis import MesAPIs, MySchoolAPIs
 from database import User
-from handlers.mes.router import APIs, Mes, MesUser, isMesUser, router
+from handlers.router import router
+from inline.types import AdditionalButtons
+from octodiary import types
 from octodiary.exceptions import APIError
 from octodiary.types.mes.mobile import EventsResponse
-from octodiary.types.mes.mobile.lesson_schedule_item import (
-    LessonHomework,
-    LessonScheduleItem,
-    Mark,
-)
-
-from inline.types import AdditionalButtons
-from utils.other import handler, pluralization_string, sort_dict_by_date
+from utils.filters import apis_and_user
+from utils.other import get_date, handler, pluralization_string, sort_dict_by_date
 from utils.other import mark as MARK
 from utils.texts import Texts
+
+LessonScheduleItem = Union[types.mes.mobile.LessonScheduleItem, types.myschool.mobile.LessonScheduleItems]
+LessonHomework = Union[
+    types.mes.mobile.lesson_schedule_item.LessonHomework,
+    types.myschool.mobile.lesson_schedule_items.LessonHomework
+]
+Mark = Union[
+    types.mes.mobile.lesson_schedule_item.Mark,
+    types.myschool.mobile.lesson_schedule_items.Mark
+]
 
 
 def day_schedule_info(events: EventsResponse, from_db, *, inline: bool = False, exclude_marks: bool = False):
@@ -44,7 +52,6 @@ def day_schedule_info(events: EventsResponse, from_db, *, inline: bool = False, 
     available_other_source: dict[str, list[str]] = {}
 
     for event in events.response:
-
         start = datetime.strptime(event.start_at, "%Y-%m-%dT%H:%M:%S%z")
         end = datetime.strptime(event.finish_at, "%Y-%m-%dT%H:%M:%S%z")
 
@@ -58,7 +65,6 @@ def day_schedule_info(events: EventsResponse, from_db, *, inline: bool = False, 
 
         if date_str not in available_other_source:
             available_other_source[date_str] = []
-
 
         match event.source:
             case "ORGANIZER":
@@ -88,7 +94,7 @@ def day_schedule_info(events: EventsResponse, from_db, *, inline: bool = False, 
             + (
                 (
                         f"\n  {'├' if homeworks else '└'} <b>Оценки</b>: " + " | ".join(
-                    [f"<code>{MARK(mark.value, mark.weight)}</code>" for mark in event.marks])
+                            [f"<code>{MARK(mark.value, mark.weight)}</code>" for mark in event.marks])
                 ) if event.marks and not exclude_marks else ""
             )
             + (
@@ -186,22 +192,18 @@ def lesson_info(lesson: LessonScheduleItem) -> str:
     )
 
 
-@router.message(
-    F.func(isMesUser),
-    F.func(MesUser).as_("user"),
-    F.func(Mes).as_("apis"),
-    Command("schedule")
-)
-@router.message(
-    F.func(isMesUser),
-    F.func(MesUser).as_("user"),
-    F.func(Mes).as_("apis"),
-    F.text == Texts.Buttons.SCHEDULE,
-    F.chat.type == ChatType.PRIVATE
-)
+@router.message(Command("schedule"))
+@router.message(F.text == Texts.Buttons.SCHEDULE, F.chat.type == ChatType.PRIVATE)
 @handler()
-async def schedule(update: Message | CallbackQuery, apis: APIs, user: User, *, is_inline: bool = False):
-    """Get schedule"""
+@apis_and_user
+async def schedule(
+        update: Message | CallbackQuery,
+        apis: MesAPIs | MySchoolAPIs,
+        user: User,
+        *,
+        is_inline: bool = False
+):
+    """Get schedule information"""
 
     if not is_inline:
         response = await update.bot.inline.answer(update, Texts.LOADING)
@@ -210,16 +212,12 @@ async def schedule(update: Message | CallbackQuery, apis: APIs, user: User, *, i
 
     from_db = ""
     try:
-        today = date.today()
-        events = await apis.mobile.get_events(
-            person_id=user.db_profile["children"][0]["contingent_guid"],
-            mes_role=user.db_profile["profile"]["type"],
-            begin_date=(
-                    today - timedelta(days=-1 * (0 - today.weekday()))
-            ),
-            end_date=(
-                    today + timedelta(days=14 + (6 - today.weekday()))
-            )
+        today = get_date()
+        events = await api.get_events(
+            user=user,
+            apis=apis,
+            begin_date=today - timedelta(days=-1 * (0 - today.weekday())),
+            end_date=today + timedelta(days=14 + (6 - today.weekday()))
         )
     except APIError:
         events = user.db_events
@@ -249,33 +247,29 @@ async def schedule(update: Message | CallbackQuery, apis: APIs, user: User, *, i
         await update.answer(Texts.UPDATED)
 
 
-@router.message(
-    F.func(isMesUser),
-    F.func(MesUser).as_("user"),
-    F.func(Mes).as_("apis"),
-    Command("lesson")
-)
+@router.message(Command("lesson"))
 @handler()
+@apis_and_user
 async def get_lesson_info(
         update: Message | CallbackQuery,
-        apis: APIs,
+        apis: MesAPIs | MySchoolAPIs,
         user: User,
-        command: CommandObject,
+        command: CommandObject = None,
         lesson_id: Optional[str] = None,
         *,
         is_inline: bool = False
 ):
-    """Get lesson info"""
+    """Get lesson information"""
 
     if not is_inline:
         response = await update.bot.inline.answer(update, Texts.LOADING)
     else:
         response = update
 
-    lesson = await apis.mobile.get_lesson_schedule_items(
-        profile_id=user.db_profile_id,
-        student_id=user.db_profile["children"][0]["id"],
-        lesson_id=command.args.strip() if command else lesson_id
+    lesson = await api.get_schedule_item(
+        user=user,
+        apis=apis,
+        lesson_id=int(command.args.strip() if command else lesson_id)
     )
 
     await update.bot.inline.answer(
@@ -287,7 +281,6 @@ async def get_lesson_info(
             "kwargs": {
                 "apis": apis,
                 "user": user,
-                "command": command,
                 "lesson_id": lesson_id,
                 "is_inline": is_inline
             },

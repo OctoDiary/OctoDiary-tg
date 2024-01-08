@@ -6,7 +6,7 @@ import re
 from datetime import date
 
 import requests
-from aiogram import Bot, Router, F
+from aiogram import Bot, F, Router
 from aiogram.enums import ChatType
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -15,20 +15,27 @@ from aiogram.types import (
     BufferedInputFile,
     CallbackQuery,
     InputMediaPhoto,
-    Message, ReplyKeyboardRemove,
+    Message,
+    ReplyKeyboardRemove,
 )
 
 from database import Database
-from handlers.mes.loop import save_mes_user_data
-from handlers.myschool.loop import save_my_school_user_data
+from handlers.loop import save_user_data
 from octodiary.asyncApi.mes import AsyncMobileAPI as MESMobileAPI
 from octodiary.asyncApi.myschool import AsyncMobileAPI as MySchoolMobileAPI
 from octodiary.exceptions import APIError
 from octodiary.types.captcha import Captcha
 from octodiary.types.enter_sms_code import EnterSmsCode
 from utils.filters import AuthFilter
-from utils.keyboard import AUTH_LOGIN_TYPE_MES, AUTH_LOGIN_TYPE_MY_SCHOOL, AUTH_SYSTEMS, DEFAULT, DEFAULT_MES, \
-    YES_OR_NO, CANCEL
+from utils.keyboard import (
+    AUTH_LOGIN_TYPE_MES,
+    AUTH_LOGIN_TYPE_MY_SCHOOL,
+    AUTH_SYSTEMS,
+    CANCEL,
+    DEFAULT,
+    DEFAULT_MES,
+    YES_OR_NO,
+)
 from utils.other import get_hash, pluralization_string
 from utils.texts import Texts
 
@@ -550,10 +557,7 @@ async def confirm(message: Message, state: FSMContext):
             user.db_skip_notifications = True
             user.db_notified_ids = []
 
-            if data["system"] == Texts.Systems.MY_SCHOOL:
-                await save_my_school_user_data(str(message.from_user.id))
-            else:
-                await save_mes_user_data(str(message.from_user.id))
+            await save_user_data(str(message.from_user.id))
 
             await state.clear()
 

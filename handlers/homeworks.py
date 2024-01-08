@@ -3,18 +3,18 @@
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
 
-from datetime import date, timedelta
-
 from aiogram import F
 from aiogram.enums import ChatType
 from aiogram.filters import Command
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import CallbackQuery, Message
 
+import api
+from apis import MesAPIs, MySchoolAPIs
 from database import User
-from handlers.mes.router import APIs, Mes, MesUser, isMesUser, router
-from octodiary.types.myschool.mobile import ShortHomeworks
-
+from handlers.router import router
 from inline.types import AdditionalButtons
+from octodiary.types.myschool.mobile import ShortHomeworks
+from utils.filters import apis_and_user
 from utils.other import handler, sort_dict_by_date
 from utils.texts import Texts
 
@@ -44,21 +44,17 @@ def homeworks_info(homeworks: ShortHomeworks):
     }
 
 
-@router.message(
-    F.func(isMesUser),
-    F.func(MesUser).as_("user"),
-    F.func(Mes).as_("apis"),
-    Command("homeworks_upcoming")
-)
-@router.message(
-    F.func(isMesUser),
-    F.func(MesUser).as_("user"),
-    F.func(Mes).as_("apis"),
-    F.text == Texts.Buttons.HOMEWORKS_UPCOMING,
-    F.chat.type == ChatType.PRIVATE
-)
+@router.message(Command("homeworks_upcoming"))
+@router.message(F.text == Texts.Buttons.HOMEWORKS_UPCOMING, F.chat.type == ChatType.PRIVATE)
 @handler()
-async def homeworks_upcoming(update: Message | CallbackQuery, apis: APIs, user: User, *, is_inline: bool = False):
+@apis_and_user
+async def homeworks_upcoming(
+        update: Message | CallbackQuery,
+        apis: MesAPIs | MySchoolAPIs,
+        user: User,
+        *,
+        is_inline: bool = False
+):
     """Homeworks upcoming"""
 
     if not is_inline:
@@ -66,12 +62,7 @@ async def homeworks_upcoming(update: Message | CallbackQuery, apis: APIs, user: 
     else:
         response = update
 
-    homeworks = await apis.mobile.get_homeworks_short(
-        student_id=user.db_profile["children"][0]["id"],
-        profile_id=user.db_profile_id,
-        from_date=date.today(),
-        to_date=(date.today() + timedelta(days=14))
-    )
+    homeworks = await api.get_homeworks(user=user, apis=apis, type=api.HomeworkTypes.UPCOMING)
 
     await update.bot.inline.list(
         update=response,
@@ -96,34 +87,25 @@ async def homeworks_upcoming(update: Message | CallbackQuery, apis: APIs, user: 
         await update.answer(Texts.UPDATED)
 
 
-@router.message(
-    F.func(isMesUser),
-    F.func(MesUser).as_("user"),
-    F.func(Mes).as_("apis"),
-    Command("homeworks_past")
-)
-@router.message(
-    F.func(isMesUser),
-    F.func(MesUser).as_("user"),
-    F.func(Mes).as_("apis"),
-    F.text == Texts.Buttons.HOMEWORKS_PAST,
-    F.chat.type == ChatType.PRIVATE
-)
+@router.message(Command("homeworks_past"))
+@router.message(F.text == Texts.Buttons.HOMEWORKS_PAST, F.chat.type == ChatType.PRIVATE)
 @handler()
-async def homeworks_past(update: Message | CallbackQuery, apis: APIs, user: User, *, is_inline: bool = False):
-    """Homeworks past"""
+@apis_and_user
+async def homeworks_past(
+        update: Message | CallbackQuery,
+        apis: MesAPIs | MySchoolAPIs,
+        user: User,
+        *,
+        is_inline: bool = False
+):
+    """Past homeworks info"""
 
     if not is_inline:
         response = await update.bot.inline.answer(update, Texts.LOADING)
     else:
         response = update
 
-    homeworks = await apis.mobile.get_homeworks_short(
-        student_id=user.db_profile["children"][0]["id"],
-        profile_id=user.db_profile_id,
-        from_date=date.today() - timedelta(days=14),
-        to_date=date.today() - timedelta(days=1)
-    )
+    homeworks = await api.get_homeworks(user=user, apis=apis, type=api.HomeworkTypes.PAST)
 
     await update.bot.inline.list(
         update=response,

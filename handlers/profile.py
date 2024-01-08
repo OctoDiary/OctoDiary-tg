@@ -8,64 +8,78 @@ from aiogram.enums import ChatType
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 
+import api
+from apis import MesAPIs, MySchoolAPIs
 from database import Database, User
-from handlers.mes.router import APIs, Mes, MesUser, isMesUser, router
+from handlers.router import router
 from octodiary.exceptions import APIError
 from octodiary.types.mes.mobile.family_profile import Child, FamilyProfile
+from utils.filters import apis_and_user
 from utils.other import handler
 from utils.texts import Texts
 
 
-async def child_profile_info(child: Child, apis: APIs, user: User) -> str:
+async def child_profile_info(child: Child, apis: MesAPIs | MySchoolAPIs, user: User) -> str:
+    # if user.system == Texts.Systems.MES:
     return (
-        Texts.Mes.CHILD_INFO.FIO(child=child)
-        + (
-            Texts.Mes.CHILD_INFO.PHONE(child=child)
-            if child.phone
-            else ""
-        ) + (
-            Texts.Mes.CHILD_INFO.BIRTH_DATE(child=child)
-            if child.birth_date
-            else ""
-        ) + (
-            Texts.Mes.CHILD_INFO.BALANCE(BALANCE=str(balance / 100) + " ₽", contract_id=child.contract_id)
-            if (
-                balance := (
-                    await apis.mobile.get_status(
-                        user.db_profile_id,
-                        child.contract_id
+            Texts.CHILD_INFO.FIO(child=child)
+            + (
+                Texts.CHILD_INFO.PHONE(child=child)
+                if child.phone
+                else ""
+            ) + (
+                Texts.CHILD_INFO.BIRTH_DATE(child=child)
+                if child.birth_date
+                else ""
+            ) + (
+                    (
+                        Texts.CHILD_INFO.BALANCE(BALANCE=str(balance / 100) + " ₽", contract_id=child.contract_id)
+                        if (
+                            balance := (
+                                await apis.mobile.get_status(
+                                    user.db_profile_id,
+                                    str(child.contract_id)
+                                )
+                            ).students[0].balance
+                        )
+                        else ""
                     )
-                ).students[0].balance
-            )
-            else ""
-        ) + (
-            Texts.Mes.CHILD_INFO.EMAIL(child=child)
-            if child.email
-            else ""
-        ) + Texts.Mes.CHILD_INFO.SCHOOL(child=child)
+                    if user.system == Texts.Systems.MES and child.contract_id
+                    else ""
+            ) + (
+                Texts.CHILD_INFO.EMAIL(child=child)
+                if child.email
+                else ""
+            ) + Texts.CHILD_INFO.SCHOOL(child=child)
     )
+    # else:
+    #     return (
+    #         Texts.CHILD_INFO(
+    #             child=child
+    #         )
+    #     )
 
 
-async def profile_info(profile: FamilyProfile, from_db: str, apis: APIs, user: User) -> str:
+async def profile_info(profile: FamilyProfile, from_db: str, apis: MesAPIs | MySchoolAPIs, user: User) -> str:
     text = (
-        Texts.Mes.PROFILE_INFO.START(
+        Texts.PROFILE_INFO.START(
             profile=profile,
             from_db=from_db,
             PROFILE_TYPE=(
-                'Родитель'
-                if profile.profile.type == 'parent'
-                else 'Ученик'
+                "Родитель"
+                if profile.profile.type == "parent"
+                else "Ученик"
             )
-        ) + Texts.Mes.PROFILE_INFO.FIO(profile=profile)
+        ) + Texts.PROFILE_INFO.FIO(profile=profile)
         + (
-            Texts.Mes.PROFILE_INFO.PHONE(PHONE=profile.profile.phone)
+            Texts.PROFILE_INFO.PHONE(PHONE=profile.profile.phone)
             if profile.profile.phone
             else ""
         ) + (
-            Texts.Mes.PROFILE_INFO.EMAIL(EMAIL=profile.profile.email)
+            Texts.PROFILE_INFO.EMAIL(EMAIL=profile.profile.email)
             if profile.profile.email
             else ""
-        ) + Texts.Mes.PROFILE_INFO.BIRTH_DATE(BIRTH_DATE=profile.profile.birth_date or "Нет информации")
+        ) + Texts.PROFILE_INFO.BIRTH_DATE(BIRTH_DATE=profile.profile.birth_date or "Нет информации")
     )
 
     if profile.profile.type == "parent":
@@ -76,40 +90,39 @@ async def profile_info(profile: FamilyProfile, from_db: str, apis: APIs, user: U
                 for child in profile.children
             ]
         )
-    else:
+    elif user.system == Texts.Systems.MES:
         text += (
-            Texts.Mes.CHILD_INFO.BALANCE(balance=str(balance // 100) + " ₽", contract_id=profile.children[0].contract_id).replace("├ ", "┌ ")
+            Texts.CHILD_INFO.BALANCE(
+                balance=str(balance // 100) + " ₽",
+                contract_id=profile.children[0].contract_id
+            ).replace("├ ", "┌ ")
             if (
                 balance := (
                     await apis.mobile.get_status(
                         user.db_profile_id,
-                        profile.children[0].contract_id
+                        str(profile.children[0].contract_id)
                     )
                 ).students[0].balance
             )
             else ""
-        ) + Texts.Mes.CHILD_INFO.SCHOOL(child=profile.children[0]) + "\n"
+        ) + Texts.CHILD_INFO.SCHOOL(child=profile.children[0]) + "\n"
 
     text += Texts.PROFILE_INFO_LOGOUT
     return text
 
 
-@router.message(
-    F.func(isMesUser),
-    F.func(MesUser).as_("user"),
-    F.func(Mes).as_("apis"),
-    Command("profile")
-)
-@router.message(
-    F.func(isMesUser),
-    F.func(MesUser).as_("user"),
-    F.func(Mes).as_("apis"),
-    F.text == Texts.Buttons.PROFILE,
-    F.chat.type == ChatType.PRIVATE
-)
+@router.message(Command("profile"))
+@router.message(F.text == Texts.Buttons.PROFILE, F.chat.type == ChatType.PRIVATE)
 @handler()
-async def profile_cmd(update: Message | CallbackQuery, apis: APIs, user: User, *, is_inline: bool = False):
-    """Get profile"""
+@apis_and_user
+async def profile_cmd(
+        update: Message | CallbackQuery,
+        apis: MesAPIs | MySchoolAPIs,
+        user: User,
+        *,
+        is_inline: bool = False
+):
+    """Get profile information"""
 
     if not is_inline:
         response = await update.bot.inline.answer(update, Texts.LOADING)
@@ -118,14 +131,14 @@ async def profile_cmd(update: Message | CallbackQuery, apis: APIs, user: User, *
 
     from_db = ""
     try:
-        profile = await apis.mobile.get_family_profile(user.db_profile_id)
+        profile = await api.get_profile(user=user, apis=apis)
     except APIError:
         profile = FamilyProfile.model_validate(user.db_profile)
         from_db = Texts.FROM_DB
 
     await update.bot.inline.answer(
         response,
-        response=profile_info(profile, from_db),
+        response=await profile_info(profile, from_db, apis, user),
         reply_markup={
             "text": Texts.Buttons.UPDATE,
             "callback": profile_cmd,
@@ -143,14 +156,10 @@ async def profile_cmd(update: Message | CallbackQuery, apis: APIs, user: User, *
         await update.answer(Texts.UPDATED)
 
 
-
-@router.message(
-    F.func(isMesUser),
-    F.func(MesUser).as_("user"),
-    Command("logout")
-)
+@router.message(Command("logout"))
 @handler()
-async def logout_command(message: Message, user: User):
+@apis_and_user
+async def logout_command(message: Message, user: User, apis: MesAPIs | MySchoolAPIs):
     """Logout"""
     await message.bot.inline.answer(
         update=message,

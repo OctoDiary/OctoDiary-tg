@@ -3,10 +3,10 @@
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
 
-from datetime import date, timedelta
+from datetime import timedelta
 from re import Match
 
-from aiogram import Bot, F
+from aiogram import F
 from aiogram.types import (
     ChosenInlineResult,
     InlineKeyboardButton,
@@ -17,29 +17,30 @@ from aiogram.types import (
     InputTextMessageContent,
 )
 
+import api
+from apis import MesAPIs, MySchoolAPIs
 from database import User
-from handlers.mes.homeworks import homeworks_info, homeworks_past, homeworks_upcoming
-from handlers.mes.marks import marks_sorted_by_date_info, marks_sorted_by_subject_info, marks_by_date, marks_by_subject
-from handlers.mes.profile import profile_info, profile_cmd
-from handlers.mes.router import APIs, Mes, MesUser, isMesUser, router
-from handlers.mes.schedule import day_schedule_info, lesson_info, schedule, get_lesson_info
-from handlers.mes.settings import TEXT, markup
+from handlers.homeworks import homeworks_info, homeworks_past, homeworks_upcoming
+from handlers.marks import marks_by_date, marks_by_subject, marks_sorted_by_date_info, marks_sorted_by_subject_info
+from handlers.profile import profile_cmd, profile_info
+from handlers.router import router
+from handlers.schedule import day_schedule_info, get_lesson_info, lesson_info, schedule
+from handlers.settings import TEXT, markup
+from handlers.visits import visits_cmd, visits_info
+from inline.types import AdditionalButtons
 from octodiary.exceptions import APIError
 from octodiary.types.mes.mobile import FamilyProfile
-from handlers.mes.visits import visits_info
-from inline.types import AdditionalButtons
-from utils.other import handler, sort_dict_by_date
+from utils.filters import apis_and_user
+from utils.other import get_date, handler, sort_dict_by_date
 from utils.texts import Texts
 
 
 @router.inline_query(
-    F.func(isMesUser),
-    F.func(MesUser),
-    F.func(Mes),
     F.query.strip() == ""
 )
 @handler()
-async def inline_query(update: InlineQuery):
+@apis_and_user
+async def inline_query(update: InlineQuery, apis: MesAPIs | MySchoolAPIs, user: User):
     return await update.answer(
         [
             InlineQueryResultArticle(
@@ -58,7 +59,7 @@ async def inline_query(update: InlineQuery):
                 ),
                 **result_info
             )
-            for result_info in Texts.Mes.Inline.values()
+            for result_info in (Texts.Mes if user.system == Texts.Systems.MES else Texts.MySchool).Inline.values()
         ],
         cache_time=15,
         is_personal=True,
@@ -69,38 +70,27 @@ async def inline_query(update: InlineQuery):
 
 
 @router.chosen_inline_result(
-    F.func(isMesUser),
-    F.func(MesUser).as_("user"),
-    F.func(Mes).as_("apis"),
     F.result_id == Texts.Mes.Inline.SCHEDULE.id,
     F.inline_message_id.func(lambda inline_message_id: inline_message_id is not None)
 )
-@router.callback_query(
-    F.func(isMesUser),
-    F.func(MesUser).as_("user"),
-    F.func(Mes).as_("apis"),
-    F.data == Texts.Mes.Inline.SCHEDULE.id
-)
+@router.callback_query(F.data == Texts.Mes.Inline.SCHEDULE.id)
 @handler()
-async def schedule_load(update: ChosenInlineResult, bot: Bot, user: User, apis: APIs):
+@apis_and_user
+async def schedule_load(update: ChosenInlineResult, user: User, apis: MesAPIs | MySchoolAPIs):
     from_db = ""
     try:
-        today = date.today()
-        events = await apis.mobile.get_events(
-            person_id=user.db_profile["children"][0]["contingent_guid"],
-            mes_role=user.db_profile["profile"]["type"],
-            begin_date=(
-                today - timedelta(days= -1*(0 - today.weekday()))
-            ),
-            end_date=(
-                today + timedelta(days=14+(6 - today.weekday()))
-            )
+        today = get_date()
+        events = await api.get_events(
+            user=user,
+            apis=apis,
+            begin_date=(today - timedelta(days=-1 * (0 - today.weekday()))),
+            end_date=(today + timedelta(days=14 + (6 - today.weekday())))
         )
     except APIError:
         events = user.db_events
         from_db = Texts.FROM_DB
 
-    await bot.inline.list(
+    await update.bot.inline.list(
         update,
         additional_buttons=AdditionalButtons(
             below_buttons={
@@ -123,31 +113,26 @@ async def schedule_load(update: ChosenInlineResult, bot: Bot, user: User, apis: 
 
 
 @router.chosen_inline_result(
-    F.func(isMesUser),
-    F.func(MesUser).as_("user"),
-    F.func(Mes).as_("apis"),
     F.result_id == Texts.Mes.Inline.PROFILE.id,
     F.inline_message_id.func(lambda inline_message_id: inline_message_id is not None)
 )
 @router.callback_query(
-    F.func(isMesUser),
-    F.func(MesUser).as_("user"),
-    F.func(Mes).as_("apis"),
     F.data == Texts.Mes.Inline.PROFILE.id
 )
 @handler()
-async def profile_load(update: ChosenInlineResult, bot: Bot, user: User, apis: APIs):
+@apis_and_user
+async def profile_load(update: ChosenInlineResult, user: User, apis: MesAPIs | MySchoolAPIs):
     from_db = ""
     try:
-        profile = await apis.mobile.get_family_profile(user.db_profile_id)
+        profile = await api.get_profile(user=user, apis=apis)
     except APIError:
         profile = FamilyProfile.model_validate(user.db_profile)
         from_db = Texts.FROM_DB
 
-    await bot.edit_message_text(
+    await update.bot.edit_message_text(
         text=await profile_info(profile, from_db, apis, user),
         inline_message_id=update.inline_message_id,
-        reply_markup=bot.inline.generate_markup(
+        reply_markup=update.bot.inline.generate_markup(
             {
                 "text": Texts.Buttons.UPDATE,
                 "callback": profile_cmd,
@@ -164,28 +149,22 @@ async def profile_load(update: ChosenInlineResult, bot: Bot, user: User, apis: A
 
 
 @router.chosen_inline_result(
-    F.func(isMesUser),
-    F.func(MesUser).as_("user"),
-    F.func(Mes).as_("apis"),
     F.result_id == Texts.Mes.Inline.HOMEWORKS_UPCOMING.id,
     F.inline_message_id.func(lambda inline_message_id: inline_message_id is not None)
 )
 @router.callback_query(
-    F.func(isMesUser),
-    F.func(MesUser).as_("user"),
-    F.func(Mes).as_("apis"),
     F.data == Texts.Mes.Inline.HOMEWORKS_UPCOMING.id
 )
 @handler()
-async def homeworks_upcoming_load(update: ChosenInlineResult, bot: Bot, user: User, apis: APIs):
-    homeworks = await apis.mobile.get_homeworks_short(
-        student_id=user.db_profile["children"][0]["id"],
-        profile_id=user.db_profile_id,
-        from_date=date.today(),
-        to_date=(date.today() + timedelta(days=14))
+@apis_and_user
+async def homeworks_upcoming_load(update: ChosenInlineResult, user: User, apis: MesAPIs | MySchoolAPIs):
+    homeworks = await api.get_homeworks(
+        user=user,
+        apis=apis,
+        type=api.HomeworkTypes.UPCOMING
     )
 
-    await bot.inline.list(
+    await update.bot.inline.list(
         update=update,
         row_width=5,
         additional_buttons=AdditionalButtons(
@@ -206,28 +185,22 @@ async def homeworks_upcoming_load(update: ChosenInlineResult, bot: Bot, user: Us
 
 
 @router.chosen_inline_result(
-    F.func(isMesUser),
-    F.func(MesUser).as_("user"),
-    F.func(Mes).as_("apis"),
     F.result_id == Texts.Mes.Inline.HOMEWORKS_PAST.id,
     F.inline_message_id.func(lambda inline_message_id: inline_message_id is not None)
 )
 @router.callback_query(
-    F.func(isMesUser),
-    F.func(MesUser).as_("user"),
-    F.func(Mes).as_("apis"),
     F.data == Texts.Mes.Inline.HOMEWORKS_PAST.id
 )
 @handler()
-async def homeworks_past_load(update: ChosenInlineResult, bot: Bot, user: User, apis: APIs):
-    homeworks = await apis.mobile.get_homeworks_short(
-        student_id=user.db_profile["children"][0]["id"],
-        profile_id=user.db_profile_id,
-        from_date=date.today() - timedelta(days=14),
-        to_date=date.today() - timedelta(days=1)
+@apis_and_user
+async def homeworks_past_load(update: ChosenInlineResult, user: User, apis: MesAPIs | MySchoolAPIs):
+    homeworks = await api.get_homeworks(
+        user=user,
+        apis=apis,
+        type=api.HomeworkTypes.PAST
     )
 
-    await bot.inline.list(
+    await update.bot.inline.list(
         update=update,
         row_width=5,
         additional_buttons=AdditionalButtons(
@@ -248,28 +221,23 @@ async def homeworks_past_load(update: ChosenInlineResult, bot: Bot, user: User, 
 
 
 @router.chosen_inline_result(
-    F.func(isMesUser),
-    F.func(MesUser).as_("user"),
-    F.func(Mes).as_("apis"),
     F.result_id == Texts.Mes.Inline.MARKS_BY_DATE.id,
     F.inline_message_id.func(lambda inline_message_id: inline_message_id is not None)
 )
 @router.callback_query(
-    F.func(isMesUser),
-    F.func(MesUser).as_("user"),
-    F.func(Mes).as_("apis"),
     F.data == Texts.Mes.Inline.MARKS_BY_DATE.id
 )
 @handler()
-async def marks_by_date_load(update: ChosenInlineResult, bot: Bot, user: User, apis: APIs):
-    marks = await apis.mobile.get_marks(
-        student_id=user.db_profile["children"][0]["id"],
-        profile_id=user.db_profile_id,
-        from_date=date.today() - timedelta(days=14),
-        to_date=date.today(),
+@apis_and_user
+async def marks_by_date_load(update: ChosenInlineResult, user: User, apis: MesAPIs | MySchoolAPIs):
+    marks = await api.get_marks(
+        user=user,
+        apis=apis,
+        from_date=get_date() - timedelta(days=14),
+        to_date=get_date(),
     )
 
-    await bot.inline.list(
+    await update.bot.inline.list(
         update=update,
         row_width=5,
         additional_buttons=AdditionalButtons(
@@ -290,26 +258,18 @@ async def marks_by_date_load(update: ChosenInlineResult, bot: Bot, user: User, a
 
 
 @router.chosen_inline_result(
-    F.func(isMesUser),
-    F.func(MesUser).as_("user"),
-    F.func(Mes).as_("apis"),
     F.result_id == Texts.Mes.Inline.MARKS_BY_SUBJECT.id,
     F.inline_message_id.func(lambda inline_message_id: inline_message_id is not None)
 )
 @router.callback_query(
-    F.func(isMesUser),
-    F.func(MesUser).as_("user"),
-    F.func(Mes).as_("apis"),
     F.data == Texts.Mes.Inline.MARKS_BY_SUBJECT.id
 )
 @handler()
-async def marks_by_subject_load(update: ChosenInlineResult, bot: Bot, user: User, apis: APIs):
-    marks = await apis.mobile.get_subject_marks_short(
-        student_id=user.db_profile["children"][0]["id"],
-        profile_id=user.db_profile_id
-    )
+@apis_and_user
+async def marks_by_subject_load(update: ChosenInlineResult, user: User, apis: MesAPIs | MySchoolAPIs):
+    marks = await api.get_short_marks(user, apis)
 
-    await bot.inline.list(
+    await update.bot.inline.list(
         update=update,
         row_width=2,
         strings=marks_sorted_by_subject_info(
@@ -333,21 +293,16 @@ async def marks_by_subject_load(update: ChosenInlineResult, bot: Bot, user: User
 
 
 @router.chosen_inline_result(
-    F.func(isMesUser),
-    F.func(MesUser).as_("user"),
-    F.func(Mes).as_("apis"),
     F.result_id == Texts.Mes.Inline.SETTINGS.id,
     F.inline_message_id.func(lambda inline_message_id: inline_message_id is not None)
 )
 @router.callback_query(
-    F.func(isMesUser),
-    F.func(MesUser).as_("user"),
-    F.func(Mes).as_("apis"),
     F.data == Texts.Mes.Inline.SETTINGS.id
 )
 @handler()
-async def settings_load(update: ChosenInlineResult, bot: Bot, user: User, apis: APIs):
-    await bot.inline.answer(
+@apis_and_user
+async def settings_load(update: ChosenInlineResult, user: User, apis: MesAPIs | MySchoolAPIs):
+    await update.bot.inline.answer(
         update=update,
         response=TEXT,
         reply_markup=markup(user, apis)
@@ -355,26 +310,23 @@ async def settings_load(update: ChosenInlineResult, bot: Bot, user: User, apis: 
 
 
 @router.chosen_inline_result(
-    F.func(isMesUser),
-    F.func(MesUser).as_("user"),
-    F.func(Mes).as_("apis"),
     F.result_id == Texts.Mes.Inline.VISITS.id,
     F.inline_message_id.func(lambda inline_message_id: inline_message_id is not None)
 )
 @router.callback_query(
-    F.func(isMesUser),
-    F.func(MesUser).as_("user"),
-    F.func(Mes).as_("apis"),
     F.data == Texts.Mes.Inline.VISITS.id
 )
 @handler()
-async def visits_load(update: ChosenInlineResult, bot: Bot, user: User, apis: APIs):
+@apis_and_user
+async def visits_load(update: ChosenInlineResult, user: User, apis: MesAPIs):
+    bot = update.bot
+
     try:
-        today = date.today()
-        visits = await apis.mobile.get_visits(
+        today = get_date()
+        visits_data = await apis.mobile.get_visits(
             profile_id=user.db_profile_id,
-            student_id=user.db_profile["children"][0]["id"],
-            contract_id=user.db_profile["children"][0]["contract_id"],
+            student_id=user.db_current_child["id"] if user.db_current_child else user.db_profile["children"][0]["id"],
+            contract_id=user.db_current_child["contract_id"] if user.db_current_child else user.db_profile["children"][0]["contract_id"],
             from_date=today - timedelta(days=14),
             to_date=today,
         )
@@ -386,12 +338,12 @@ async def visits_load(update: ChosenInlineResult, bot: Bot, user: User, apis: AP
         return
 
     await bot.edit_message_text(
-        visits_info(visits),
+        visits_info(visits_data),
         inline_message_id=update.inline_message_id,
         reply_markup=bot.inline.generate_markup(
             {
                 "text": Texts.Buttons.UPDATE,
-                "callback": visits,
+                "callback": visits_cmd,
                 "kwargs": {
                     "apis": apis,
                     "user": user,
@@ -405,9 +357,6 @@ async def visits_load(update: ChosenInlineResult, bot: Bot, user: User, apis: AP
 
 
 @router.inline_query(
-    F.func(isMesUser),
-    F.func(MesUser),
-    F.func(Mes),
     F.query.strip().regexp(r"lesson (.*[0-9])").as_("match")
 )
 @handler()
@@ -445,37 +394,31 @@ async def lesson_info_inline_query(update: InlineQuery, match: Match):
 
 
 @router.chosen_inline_result(
-    F.func(isMesUser),
-    F.func(MesUser).as_("user"),
-    F.func(Mes).as_("apis"),
     F.result_id.regexp(r"lesson:(.*[0-9])").as_("match"),
     F.inline_message_id.func(lambda inline_message_id: inline_message_id is not None)
 )
 @router.callback_query(
-    F.func(isMesUser),
-    F.func(MesUser).as_("user"),
-    F.func(Mes).as_("apis"),
     F.data.regexp(r"lesson:(.*[0-9])").as_("match")
 )
 @handler()
-async def lesson_info_load(update: ChosenInlineResult, bot: Bot, user: User, apis: APIs, match: Match):
+@apis_and_user
+async def lesson_info_load(update: ChosenInlineResult, user: User, apis: MesAPIs | MySchoolAPIs, match: Match):
     try:
-        lesson = await apis.mobile.get_schedule_item(
-            profile_id=user.db_profile_id,
-            student_id=user.db_profile["children"][0]["id"],
+        lesson = await api.get_schedule_item(
+            user=user, apis=apis,
             lesson_id=match.group(1)
         )
     except APIError as e:
-        await bot.edit_message_text(
+        await update.bot.edit_message_text(
             text=Texts.API_ERROR(ERROR=e),
             inline_message_id=update.inline_message_id
         )
         return
 
-    return await bot.edit_message_text(
+    return await update.bot.edit_message_text(
         text=lesson_info(lesson),
         inline_message_id=update.inline_message_id,
-        reply_markup=bot.inline.generate_markup(
+        reply_markup=update. bot.inline.generate_markup(
             {
                 "text": Texts.Buttons.UPDATE,
                 "callback": get_lesson_info,

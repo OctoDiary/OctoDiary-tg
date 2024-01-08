@@ -4,21 +4,24 @@
 #           https://github.com/OctoDiary
 
 
-from datetime import date, timedelta
+from datetime import timedelta
 
 from aiogram import F
 from aiogram.enums import ChatType
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 
+import api
+from apis import MesAPIs, MySchoolAPIs
 from database import User
-from handlers.myschool.router import APIs, MySchool, MySchoolUser, isMySchoolUser, router
+from handlers.router import router
 from inline.types import AdditionalButtons
-from octodiary.types.myschool.mobile.marks import Marks
-from octodiary.types.myschool.mobile.marks import PayloadItem as MarkPayloadItem
-from octodiary.types.myschool.mobile.short_subject_marks import PayloadItem as ShortSubjectPayloadItem
-from octodiary.types.myschool.mobile.short_subject_marks import ShortSubjectMarks
-from utils.other import handler, pluralization_string, sort_dict_by_date
+from octodiary.types.mes.mobile.marks import Marks
+from octodiary.types.mes.mobile.marks import Payload as MarkPayloadItem
+from octodiary.types.mes.mobile.short_subject_marks import Payload as ShortSubjectPayloadItem
+from octodiary.types.mes.mobile.short_subject_marks import ShortSubjectMarks
+from utils.filters import apis_and_user
+from utils.other import get_date, handler, pluralization_string, sort_dict_by_date
 from utils.other import mark as MARK
 from utils.texts import Texts
 
@@ -60,16 +63,17 @@ def dynamic(item):
 
 
 def marks_short_item(item: ShortSubjectPayloadItem, allow_goals: bool = False):
-    marks = "<code>" + "</code>; <code>".join([MARK(mark.value, mark.weight) for mark in item.marks]) + "</code>" if item.marks else ""
+    marks = "<code>" + "</code>; <code>".join(
+        [MARK(mark.value, mark.weight) for mark in item.marks]) + "</code>" if item.marks else ""
 
     goals = (
-        Texts.GOAL(
-            ROUND=item.target.round,
-            VALUE=item.target.value
-        ) + Texts.OR.join([
-            MARK(method.value, method.weight) + f"[{method.remain} шт.]"
-            for method in item.target.paths
-        ]) + "</code>\n"
+            Texts.GOAL(
+                ROUND=item.target.round,
+                VALUE=item.target.value
+            ) + Texts.OR.join([
+                MARK(str(method.value), method.weight) + f"[{method.remain} шт.]"
+                for method in item.target.paths
+            ]) + "</code>\n"
     ) if allow_goals and item.target and item.target.round and item.target.paths else ""
 
     return Texts.SUBJECT_MARKS_INFO(
@@ -89,42 +93,38 @@ def marks_sorted_by_subject_info(marks_short: ShortSubjectMarks, goals: bool = F
     return {
         (
             item
-                .subject_name
-                    .replace(Texts.OBZ, Texts.OBZ_SHORT)
-                        .replace(Texts.PHIZ_KULTURA, Texts.PHIZ_KULTURA_SHORT)
+            .subject_name
+            .replace(Texts.OBZ, Texts.OBZ_SHORT)
+            .replace(Texts.PHIZ_KULTURA, Texts.PHIZ_KULTURA_SHORT)
         ): info
         for item in marks_short.payload
         if (info := marks_short_item(item=item, allow_goals=goals))
     }
 
 
-@router.message(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
-    Command("marks_by_date")
-)
-@router.message(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
-    F.text == Texts.Buttons.MARKS_BY_DATE,
-    F.chat.type == ChatType.PRIVATE
-)
+@router.message(Command("marks_by_date"))
+@router.message(F.text == Texts.Buttons.MARKS_BY_DATE, F.chat.type == ChatType.PRIVATE)
 @handler()
-async def marks_by_date(update: Message | CallbackQuery, apis: APIs, user: User, *, is_inline: bool = False):
-    """Marks users by date."""
+@apis_and_user
+async def marks_by_date(
+        update: Message | CallbackQuery,
+        apis: MesAPIs | MySchoolAPIs,
+        user: User,
+        *,
+        is_inline: bool = False
+):
+    """Marks users by date"""
 
     if not is_inline:
         response = await update.bot.inline.answer(update, Texts.LOADING)
     else:
         response = update
 
-    marks = await apis.mobile.get_marks(
-        student_id=user.db_profile["children"][0]["id"],
-        profile_id=user.db_profile_id,
-        from_date=date.today() - timedelta(days=14),
-        to_date=date.today(),
+    marks = await api.get_marks(
+        user=user,
+        apis=apis,
+        from_date=get_date() - timedelta(days=14),
+        to_date=get_date(),
     )
 
     await update.bot.inline.list(
@@ -150,22 +150,18 @@ async def marks_by_date(update: Message | CallbackQuery, apis: APIs, user: User,
         await update.answer(Texts.UPDATED)
 
 
-@router.message(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
-    Command("marks_by_subject")
-)
-@router.message(
-    F.func(isMySchoolUser),
-    F.func(MySchoolUser).as_("user"),
-    F.func(MySchool).as_("apis"),
-    F.text == Texts.Buttons.MARKS_BY_SUBJECT,
-    F.chat.type == ChatType.PRIVATE
-)
+@router.message(Command("marks_by_subject"))
+@router.message(F.text == Texts.Buttons.MARKS_BY_SUBJECT, F.chat.type == ChatType.PRIVATE)
 @handler()
-async def marks_by_subject(update: Message | CallbackQuery, apis: APIs, user: User, *, is_inline: bool = False):
-    """Marks users by subject."""
+@apis_and_user
+async def marks_by_subject(
+        update: Message | CallbackQuery,
+        apis: MesAPIs | MySchoolAPIs,
+        user: User,
+        *,
+        is_inline: bool = False
+):
+    """Marks users by subject"""
 
     if not is_inline:
         response = await update.bot.inline.answer(update, Texts.LOADING)
@@ -173,7 +169,7 @@ async def marks_by_subject(update: Message | CallbackQuery, apis: APIs, user: Us
         response = update
 
     marks = await apis.mobile.get_subject_marks_short(
-        student_id=user.db_profile["children"][0]["id"],
+        student_id=user.db_current_child["id"] if user.db_current_child else user.db_profile["children"][0]["id"],
         profile_id=user.db_profile_id
     )
 

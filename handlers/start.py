@@ -3,6 +3,8 @@
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
 
+import re
+
 from aiogram import F, Router
 from aiogram.enums import ChatType
 from aiogram.filters import CommandStart
@@ -14,7 +16,6 @@ from handlers.auth import app_auth
 from utils.keyboard import ABOUT, DEFAULT, DEFAULT_MES
 from utils.other import get_hash
 from utils.texts import Texts
-import re
 
 router = Router(name="Start")
 

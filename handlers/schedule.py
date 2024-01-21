@@ -85,7 +85,7 @@ def day_schedule_info(events: EventsResponse, from_db, *, inline: bool = False, 
         days_lessons[date_str].append(
             (
                 f"• <b>{event.subject_name}</b> "
-                f"[ <code>{start.hour:02}:{start.minute:02}-{end.hour:02}:{end.minute:02}</code> ] [ <code>{event.room_number}к.</code> ] "
+                f"[ <code>{start.hour:02}:{start.minute:02}-{end.hour:02}:{end.minute:02}</code> ] [ <code>{event.room_number}{'к.' if str(event.room_number).isdigit() else ''}</code> ] "
             )
             + lesson_info
             + (

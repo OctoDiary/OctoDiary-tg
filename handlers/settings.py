@@ -48,7 +48,7 @@ def markup(user: User, apis: MesAPIs | MySchoolAPIs, section: Optional[str] = No
                 "text": Texts.Buttons.CHOOSE_CHILD_PROFILE,
                 "callback": choose_child_profile_menu,
                 "kwargs": {"apis": apis, "user": user}
-            }
+            } if user.db_profile["profile"]["type"] == "parent" else {}
         ]
     ] if not section else [
         [

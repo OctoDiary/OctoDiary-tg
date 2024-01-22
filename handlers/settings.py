@@ -23,73 +23,76 @@ NOTIFICATIONS = Texts.SETTINGS_NOTIFICATIONS
 
 
 def markup(user: User, apis: MesAPIs | MySchoolAPIs, section: Optional[str] = None):
-    return [
-        [
-            {
-                "text": Texts.Buttons.SETTINGS_GOALS + ("✅" if user.db_settings.get("goals", False) else "❌"),
-                "callback": goals,
-                "kwargs": {"apis": apis, "user": user}
-            },
-            {
-                "text": Texts.Buttons.NOTIFICATIONS,
-                "callback": notifications,
-                "kwargs": {"apis": apis, "user": user}
-            },
-        ],
-        [
-            {
-                "text": Texts.Buttons.APP_AUTHORIZATION,
-                "callback": send_app_auth,
-                "kwargs": {"user": user}
-            }
-        ],
-        [
-            {
-                "text": Texts.Buttons.CHOOSE_CHILD_PROFILE,
-                "callback": choose_child_profile_menu,
-                "kwargs": {"apis": apis, "user": user}
-            } if user.db_profile["profile"]["type"] == "parent" else {}
-        ]
-    ] if not section else [
-        [
-            {
-                "text": Texts.Buttons.MARKS + (
-                    "✅" if user.db_settings.get("notifications", {}).get("create_mark", False) else "❌"),
-                "callback": notifications,
-                "kwargs": {"apis": apis, "user": user, "attr": "create_mark"}
-            },
-            {
-                "text": Texts.Buttons.BACK,
-                "callback": settings,
-                "kwargs": {"apis": apis, "user": user}
-            }
-        ]
-    ] if section == "notifications" else (
+    return (
         [
             [
                 {
-                    "text": f"{'👧' if child['sex'] == 'female' else '👦'} {child['first_name']} - {child['class_name']} класс" + (
-                        " ✅"
-                        if child == user.db_current_child
-                        or user.db_profile["children"].index(child) == 0
-                        and not user.db_current_child
-                        else ""
-                    ),
-                    "callback": choose_child_profile,
-                    "kwargs": {"apis": apis, "user": user, "child": child}
+                    "text": Texts.Buttons.SETTINGS_GOALS + ("✅" if user.db_settings.get("goals", False) else "❌"),
+                    "callback": goals,
+                    "kwargs": {"apis": apis, "user": user}
+                },
+                {
+                    "text": Texts.Buttons.NOTIFICATIONS,
+                    "callback": notifications,
+                    "kwargs": {"apis": apis, "user": user}
+                },
+            ],
+            [
+                {
+                    "text": Texts.Buttons.APP_AUTHORIZATION,
+                    "callback": send_app_auth,
+                    "kwargs": {"user": user}
                 }
             ]
-            for child in user.db_profile["children"]
-        ] + [
+        ] + (
             [
+                {
+                    "text": Texts.Buttons.CHOOSE_CHILD_PROFILE,
+                    "callback": choose_child_profile_menu,
+                    "kwargs": {"apis": apis, "user": user}
+                }
+            ] if user.db_profile["profile"]["type"] == "parent" else []
+        ) if not section else [
+            [
+                {
+                    "text": Texts.Buttons.MARKS + (
+                        "✅" if user.db_settings.get("notifications", {}).get("create_mark", False) else "❌"),
+                    "callback": notifications,
+                    "kwargs": {"apis": apis, "user": user, "attr": "create_mark"}
+                },
                 {
                     "text": Texts.Buttons.BACK,
                     "callback": settings,
                     "kwargs": {"apis": apis, "user": user}
                 }
             ]
-        ]
-    )if section == "choose_child_profile" else None
+        ] if section == "notifications" else (
+            [
+                [
+                    {
+                        "text": f"{'👧' if child['sex'] == 'female' else '👦'} {child['first_name']} - {child['class_name']} класс" + (
+                            " ✅"
+                            if child == user.db_current_child
+                            or user.db_profile["children"].index(child) == 0
+                            and not user.db_current_child
+                            else ""
+                        ),
+                        "callback": choose_child_profile,
+                        "kwargs": {"apis": apis, "user": user, "child": child}
+                    }
+                ]
+                for child in user.db_profile["children"]
+            ] + [
+                [
+                    {
+                        "text": Texts.Buttons.BACK,
+                        "callback": settings,
+                        "kwargs": {"apis": apis, "user": user}
+                    }
+                ]
+            ]
+        ) if section == "choose_child_profile" else None
+    )
 
 
 @router.message(Command("settings"))

@@ -118,7 +118,7 @@ async def check_token_and_send_confirm(message: Message, token: str, state: FSMC
         await message.delete()
     except APIError as e:
         await state.clear()
-        await message.edit_text(text=Texts.Authorization.ERROR_TRY_AGAIN(ERROR=str(e)))
+        await message.answer(text=Texts.Authorization.ERROR_TRY_AGAIN(ERROR=str(e)))
 
 
 @auth_router.message(Command(commands=["auth", "login"]))

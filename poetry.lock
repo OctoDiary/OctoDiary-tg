@@ -628,13 +628,13 @@ files = [
 
 [[package]]
 name = "octodiary"
-version = "0.2.8"
+version = "0.2.9"
 description = "Python библиотека для использования API: МЭШ / Моя Школа."
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "octodiary-0.2.8-py3-none-any.whl", hash = "sha256:070e087835efea0f19e3146ad8ebc9587fe7ba885ea6bc11391ef253cb3c09d5"},
-    {file = "octodiary-0.2.8.tar.gz", hash = "sha256:4d3404698442f13c83a1639611bb8596321c16fb908f3b073c8624587a408a07"},
+    {file = "octodiary-0.2.9-py3-none-any.whl", hash = "sha256:bf35c3b60a461890a867dbff99d23e184801aa138d89a98edb13b2c85551f332"},
+    {file = "octodiary-0.2.9.tar.gz", hash = "sha256:46b57fff2a5a92fdc19d7548021c8e898848f15b16b1f219244350d2ad6d790f"},
 ]
 
 [package.dependencies]
@@ -994,4 +994,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "1b9bf2501912af41059521bd8ee892edc8cd4a74033ab645ed1801cc493f7c23"
+content-hash = "687b3218f43292de163b52cb2623fb1e79a7a372a703e02c8e0f40c33d7bfe5f"

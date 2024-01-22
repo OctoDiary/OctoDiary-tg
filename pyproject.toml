@@ -15,7 +15,7 @@ gitpython = "^3.1.40"
 python-dotenv = "^1.0.0"
 lightdb = "^1.4.0"
 segno = "^1.6.0"
-octodiary = "0.2.8"
+octodiary = "^0.2.8"
 loguru = "^0.7.2"
 
 

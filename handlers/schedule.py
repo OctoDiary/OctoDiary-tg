@@ -52,6 +52,8 @@ def day_schedule_info(events: EventsResponse, from_db, *, inline: bool = False, 
     available_other_source: dict[str, list[str]] = {}
 
     for event in events.response:
+        is_event = False
+
         start = datetime.strptime(event.start_at, "%Y-%m-%dT%H:%M:%S%z")
         end = datetime.strptime(event.finish_at, "%Y-%m-%dT%H:%M:%S%z")
 
@@ -76,40 +78,64 @@ def day_schedule_info(events: EventsResponse, from_db, *, inline: bool = False, 
             case "AE":
                 lesson_info = "[ <b>ДО*</b> ]"
                 available_other_source[date_str] += ["AE"]
+            case "EVENTS":
+                lesson_info = "[ <b>ЛС*</b> ]"
+                available_other_source[date_str] += ["EVENTS"]
+                is_event = True
 
-        homeworks = [
-            homework.replace("\n", "</code>; <code>")
-            for homework in event.homework.descriptions
-        ] if event.homework and event.homework.descriptions else []
+        if not is_event:
+            homeworks = [
+                homework.replace("\n", "</code>; <code>")
+                for homework in event.homework.descriptions
+            ] if event.homework and event.homework.descriptions else []
 
-        days_lessons[date_str].append(
-            (
-                f"• <b>{event.subject_name}</b> "
-                f"[ <code>{start.hour:02}:{start.minute:02}-{end.hour:02}:{end.minute:02}</code> ] [ <code>{event.room_number}{'к.' if str(event.room_number).isdigit() else ''}</code> ] "
-            )
-            + lesson_info
-            + (
-                f"\n  {'├' if event.cancelled or homeworks or event.marks else '└'} <b>Замена</b>: ✅" if event.replaced else "")
-            + (f"\n  {'├' if homeworks or event.marks else '└'} <b>Отмена</b>: ✅" if event.cancelled else "")
-            + (
+            days_lessons[date_str].append(
                 (
-                        f"\n  {'├' if homeworks else '└'} <b>Оценки</b>: " + " | ".join(
-                            [f"<code>{MARK(mark.value, mark.weight)}</code>" for mark in event.marks])
-                ) if event.marks and not exclude_marks else ""
-            )
-            + (
-                (
-                        (
+                    f"• <b>{event.subject_name}</b> "
+                    f"[ <code>{start.hour:02}:{start.minute:02}-{end.hour:02}:{end.minute:02}</code> ] [ <code>{event.room_number}{'к.' if str(event.room_number).isdigit() else ''}</code> ] "
+                )
+                + lesson_info
+                + (
+                    f"\n  {'├' if event.cancelled or homeworks or event.marks else '└'} <b>Замена</b>: ✅" if event.replaced else "")
+                + (f"\n  {'├' if homeworks or event.marks else '└'} <b>Отмена</b>: ✅" if event.cancelled else "")
+                + (
+                    (
+                            f"\n  {'├' if homeworks else '└'} <b>Оценки</b>: " + " | ".join(
+                                [f"<code>{MARK(mark.value, mark.weight)}</code>" for mark in event.marks])
+                    ) if event.marks and not exclude_marks else ""
+                )
+                + (
+                    (
                             (
-                                    "\n  ├ <b>ДЗ</b>: <code>"
-                                    + "</code>\n  ├ <b>ДЗ</b>: <code>".join(homeworks[:-1])
-                                    + "</code>"
-                            ) if len(homeworks) > 1 else ""
-                        )
-                        + f"\n  └ <b>ДЗ</b>: <code>{homeworks[-1]}</code>"
-                ) if homeworks else ""
+                                (
+                                        "\n  ├ <b>ДЗ</b>: <code>"
+                                        + "</code>\n  ├ <b>ДЗ</b>: <code>".join(homeworks[:-1])
+                                        + "</code>"
+                                ) if len(homeworks) > 1 else ""
+                            )
+                            + f"\n  └ <b>ДЗ</b>: <code>{homeworks[-1]}</code>"
+                    ) if homeworks else ""
+                )
             )
-        )
+        else:
+            days_lessons[date_str].append(
+                (
+                    f"• <b>{event.title}</b> "
+                ) + (
+                    f"[ <code>{start.hour:02}:{start.minute:02}-{end.hour:02}:{end.minute:02}</code> ] "
+                    if not event.is_all_day else ""
+                ) + lesson_info + (
+                    f"\n  {'├' if event.conference_link or event.place else '└'} <b>Описание</b>: {event.description}" if event.description else ""
+                ) + (
+                    (
+                        f"\n  {'├' if event.place else '└'} <b>Конференция</b>: {event.conference_link}"
+                    ) if event.conference_link else ""
+                ) + (
+                    (
+                        f"\n  └ <b>Место</b>: {event.place}"
+                    ) if event.place else ""
+                )
+            )
 
     return {
         date_str.split("/")[0]: Texts.SCHEDULE_FOR_DAY(

@@ -8,7 +8,7 @@ import contextlib
 from datetime import date
 
 from aiogram import F
-from aiogram.filters import KICKED, MEMBER, ChatMemberUpdatedFilter, Command
+from aiogram.filters import KICKED, MEMBER, ChatMemberUpdatedFilter, Command, CommandObject
 from aiogram.types import Message
 
 from database import Database
@@ -58,10 +58,16 @@ async def user_unblocked_bot(message: Message):
 
 
 @AdminRouter.message(Command("notify"), AdminFilter)
-async def notify(message: Message):
+async def notify(message: Message, command: CommandObject):
     if not message.reply_to_message:
         await message.answer(text=Texts.Admin.NOTIFY_NO_REPLY)
         return
+
+    args = (command.args or "").split(" ")
+    system = ""
+    for arg in args:
+        if arg in ["-s", "--system"]:
+            system = args[args.index(arg) + 1]
 
     _message = await message.answer(
         text=Texts.Admin.NOTIFY_SENDING
@@ -74,6 +80,9 @@ async def notify(message: Message):
         for user_id in db.keys()
         if user_id.isdigit() and db.user(user_id).system and int(user_id) not in db.blocked_users
     ]:
+        if system and db.user(str(user)).system != system:
+            continue
+
         await asyncio.sleep(3)
         with contextlib.suppress(Exception):
             await notification_message.copy_to(user)
@@ -83,7 +92,7 @@ async def notify(message: Message):
         text=Texts.Admin.NOTIFY_SUCCESS.format(
             successfully_sent=pluralization_string(
                 successfully_sent,
-                ["польвателю", "пользователям", "пользователям"]
+                ["пользователю", "пользователям", "пользователям"]
             )
         )
     )

@@ -7,12 +7,13 @@ import re
 
 from aiogram import F, Router
 from aiogram.enums import ChatType
-from aiogram.filters import CommandStart
+from aiogram.filters import CommandObject, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from database import Database
 from handlers.auth import app_auth
+from handlers.feedback import feedback_cmd
 from utils.keyboard import ABOUT, DEFAULT, DEFAULT_MES
 from utils.other import get_hash
 from utils.texts import Texts
@@ -21,9 +22,11 @@ router = Router(name="Start")
 
 
 @router.message(CommandStart())
-async def start(message: Message, state: FSMContext):
-    if message.text != "/start":
-        if match := re.match(r"/start app_auth_(.*)", message.text):
+async def start(message: Message, state: FSMContext, command: CommandObject):
+    if command.args:
+        if command.args == "feedback":
+            await feedback_cmd(message, state)
+        elif match := re.match(r"app_auth_(.*)", command.args):
             await app_auth(message, state, match)
         return
 

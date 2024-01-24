@@ -152,7 +152,8 @@ async def confirm(message: Message, state: FSMContext, bot: Bot):
             message_thread_id=data["message_thread_id"]
         )
 
-        await msg.edit_text(Texts.FEEDBACK.SENT)
+        await msg.delete()
+        await message.answer(Texts.FEEDBACK.SENT)
     else:
         await message.answer(
             text=Texts.FEEDBACK.OK,

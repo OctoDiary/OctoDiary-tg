@@ -70,7 +70,7 @@ async def enable_scheduler_cmd(message: Message, apis: MesAPIs | MySchoolAPIs, u
 @router.message(Command("disable_scheduler"))
 @handler()
 @apis_and_user
-async def disable_scheduler_cmd(message: Message, user: User):
+async def disable_scheduler_cmd(message: Message, user: User, apis):
     """Disable scheduler for current chat"""
 
     if message.chat.type == ChatType.PRIVATE:

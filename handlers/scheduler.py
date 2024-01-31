@@ -10,6 +10,7 @@ from aiogram.enums import ChatMemberStatus, ChatType
 from aiogram.filters import Command
 from aiogram.types import Message
 
+import api
 from apis import MesAPIs, MySchoolAPIs
 from database import User
 from handlers.router import router

@@ -112,37 +112,30 @@ async def run_scheduler_for_chat(
         _message.as_(bot=bot)
         return _message
 
-    try:
-        today = get_date()
-        weekday = today.weekday()
-        weeks = [
-            await apis.mobile.get_events(
-                person_id=user.db_current_child["contingent_guid"] if user.db_current_child else profile["children"][0]["contingent_guid"],
-                mes_role=user.db_profile["profile"]["type"],
-                begin_date=(
-                    today - timedelta(days=x)
-                ),
-                end_date=(
-                    today + timedelta(days=y)
-                )
+    today = get_date()
+    weekday = today.weekday()
+    weeks = [
+        await api.get_events(
+            begin_date=today - timedelta(days=x),
+            end_date=today + timedelta(days=y),
+            user=user,
+            apis=apis
+        )
+        for x, y in [
+            (
+                -(0 - weekday),
+                6 - weekday
+            ),
+            (
+                -(7 - weekday),
+                13 - weekday
+            ),
+            (
+                -(14 - weekday),
+                20 - weekday
             )
-            for x, y in [
-                (
-                    -(0 - weekday),
-                    6 - weekday
-                ),
-                (
-                    -(7 - weekday),
-                    13 - weekday
-                ),
-                (
-                    -(14 - weekday),
-                    20 - weekday
-                )
-            ]
         ]
-    except APIError:
-        return
+    ]
 
     for index, week_events in enumerate(weeks):
         if week_events.total_count == 0:

@@ -108,7 +108,8 @@
         "APP_AUTHORIZATION": "Авторизация в приложении",
         "UPDATE": "\uD83D\uDD04 Обновить",
         "CANCEL": "Отменить",
-        "CHOOSE_CHILD_PROFILE": "Выбрать профиль ученика"
+        "CHOOSE_CHILD_PROFILE": "Выбрать профиль ученика",
+        "HIDE_MARK": "Скрыть оценку под спойлер > "
     },
     "CHOOSE_CHILD_PROFILE": "Выберите <b>профиль ученика</b> для просмотра его расписания, оценок и домашних заданий:",
     "START": "\uD83D\uDC4B Привет, <b>{USER_FULL_NAME}</b>!\n\n\uD83E\uDD16 Я - бот <b>OctoDiary</b>!\nМои возможности:\n• <b>Поддержка</b> систем <a href=\"https://myschool.mosreg.ru/\"><b>Моя Школа</b></a> и <a href=\"https://school.mos.ru/\"><b>МЭШ</b></a>\n• Расписание, оценки, домашние задания\n• <b>Уведомления</b> о новых оценках\nИ многое другое!",
@@ -125,7 +126,8 @@
             "WORK_TYPE": "├ <b>Тип</b> работы: <code>{CONTROL_FORM_NAME}</code> - {WEIGHT} {IS_EXAM_EMOJI}\n",
             "COMMENT": "├ <b>Комментарий</b>: <code>{COMMENT}</code>\n",
             "LESSON_DATE": "└ <b>Дата</b> урока: <code>{TIME}</code>\n\n",
-            "HASHTAGS": "<tg-spoiler>#newMark #notification #date_{DATE}</tg-spoiler>"
+            "HASHTAGS": "<tg-spoiler>#newMark #notification #date_{DATE}</tg-spoiler>",
+            "HIDDEN_MARK": "├ <b>Новая оценка</b>: <tg-spoiler>{MARK}</tg-spoiler>\n"
         },
         "EditedMark": {
             "SUBTITLE": " [ <b>Оценка</b> ] [ <b>Изменение</b> ] {CHILD_NAME}\n\n",
@@ -135,7 +137,8 @@
             "WORK_TYPE": "├ <b>Тип</b> работы: <code>{CONTROL_FORM_NAME}</code> - {WEIGHT} {IS_EXAM_EMOJI}\n",
             "COMMENT": "├ <b>Комментарий</b>: <code>{COMMENT}</code>\n",
             "LESSON_DATE": "└ <b>Дата</b> урока: <code>{TIME}</code>\n\n",
-            "HASHTAGS": "<tg-spoiler>#editedMark #notification #date_{DATE}</tg-spoiler>"
+            "HASHTAGS": "<tg-spoiler>#editedMark #notification #date_{DATE}</tg-spoiler>",
+            "HIDDEN_MARK": "├ <b>Новая оценка</b>: <tg-spoiler>{MARK}</tg-spoiler>\n"
         }
     },
     "HOMEWORKS_FOR_DATE": "📝 <b>Домашние задания на {DATE}:</b>\n\n",

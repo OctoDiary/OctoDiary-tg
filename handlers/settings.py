@@ -52,21 +52,39 @@ def markup(user: User, apis: APIs, section: Optional[str] = None):
                     "kwargs": {"apis": apis, "user": user}
                 }
             ] if user.db_profile["profile"]["type"] == "parent" else []
-        ) if not section else [
+        ) if not section else (
             [
-                {
-                    "text": Texts.Buttons.MARKS + (
-                        "✅" if user.db_settings.get("notifications", {}).get("create_mark", False) else "❌"),
-                    "callback": notifications,
-                    "kwargs": {"apis": apis, "user": user, "attr": "create_mark"}
-                },
-                {
-                    "text": Texts.Buttons.BACK,
-                    "callback": settings,
-                    "kwargs": {"apis": apis, "user": user}
-                }
+                [
+                    {
+                        "text": Texts.Buttons.MARKS + (
+                            "✅" if user.db_settings.get("notifications", {}).get("create_mark", False) else "❌"),
+                        "callback": notifications,
+                        "kwargs": {"apis": apis, "user": user, "attr": "create_mark"}
+                    }
+                ]
+
+            ] + (
+                [
+                    [
+                        {
+                            "text": Texts.Buttons.HIDE_MARK + (
+                                "✅" if user.db_settings.get("notifications", {}).get("hide_mark", False) else "❌"
+                            ),
+                            "callback": notifications,
+                            "kwargs": {"apis": apis, "user": user, "attr": "hide_mark"}
+                        }
+                    ]
+                ] if user.db_settings.get("notifications", {}).get("create_mark", False) else []
+            ) + [
+                [
+                    {
+                        "text": Texts.Buttons.BACK,
+                        "callback": settings,
+                        "kwargs": {"apis": apis, "user": user}
+                    }
+                ]
             ]
-        ] if section == "notifications" else (
+        ) if section == "notifications" else (
             [
                 [
                     {

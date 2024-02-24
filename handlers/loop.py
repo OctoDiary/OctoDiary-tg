@@ -145,7 +145,8 @@ def generate_text_notification(
         *,
         edited: bool = False,
         old_mark_value: str = "",
-        child_name: str
+        child_name: str,
+        hide_mark: bool
 ):
     text = Texts.Notifications.TITLE
     if edited:
@@ -159,7 +160,7 @@ def generate_text_notification(
     )
     if edited:
         text += texts.OLD_MARK(MARK=old_mark_value)
-    text += texts.NEW_MARK(
+    text += (texts.NEW_MARK if not hide_mark else texts.HIDDEN_MARK)(
         MARK=mark(mark_data.value, mark_data.weight)
     )
     text += texts.WORK_TYPE(
@@ -232,6 +233,7 @@ async def check_user_notifications(user_id, bot: Bot):
                         if len(user.db_profile["children"]) > 1
                         else ""
                     ),
+                    hide_mark=user.db_settings.get("notifications", {}).get("hide_mark", False)
                 )
 
                 sent = False

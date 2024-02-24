@@ -10,6 +10,7 @@ import sys
 from logging import getLogger
 
 from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
 # Load .env file, import inline manager and routers
@@ -26,7 +27,7 @@ logger = getLogger(__name__)
 
 async def amain():
     token = os.getenv("TOKEN")
-    bot = Bot(token=token, parse_mode=ParseMode.HTML)
+    bot = Bot(token=token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
     dispatcher = Dispatcher(name="OctoDiary")
     BotInlineManager(bot, dispatcher, routers)

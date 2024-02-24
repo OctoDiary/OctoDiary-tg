@@ -86,6 +86,21 @@ class User:
     def __delitem__(self, __name: str) -> None:
         self.pop(__name)
 
+    @property
+    def cache(self) -> dict:
+        return self.__db.cache.get(self.__id, {})
+
+    @cache.setter
+    def cache(self, value: dict) -> None:
+        self.__db.cache.set(self.__id, value)
+
+    def cache_key(self, name: str, default: Any = None) -> str:
+        return self.cache.get(name, default)
+
+    def cache_set_key(self, name: str, value: Any) -> None:
+        self.cache[name] = value
+        self.__db.cache.save()
+
 
 class Database(LightDB):
     """
@@ -101,6 +116,7 @@ class Database(LightDB):
     def __init__(self) -> None:
         super().__init__(location="users_db.json")
         self.settings = LightDB("settings.json")
+        self.cache = LightDB("cache.json")
 
     def __getattribute__(self, __name: str) -> Any:
         return (

@@ -4,7 +4,7 @@
 #           https://github.com/OctoDiary
 
 from datetime import datetime, timedelta
-from typing import Optional, Union
+from typing import Optional
 
 from aiogram import F
 from aiogram.enums import ChatType
@@ -12,30 +12,24 @@ from aiogram.filters import Command, CommandObject
 from aiogram.types import CallbackQuery, Message
 
 import api
-from apis import MesAPIs, MySchoolAPIs
+from apis import APIs
 from database import User
 from handlers.router import router
 from inline.types import AdditionalButtons
 from octodiary import types
 from octodiary.exceptions import APIError
-from octodiary.types.mes.mobile import EventsResponse
+from octodiary.types.mobile import EventsResponse
 from utils.filters import apis_and_user
 from utils.other import get_date, handler, pluralization_string, sort_dict_by_date
 from utils.other import mark as MARK
 from utils.texts import Texts
 
-LessonScheduleItem = Union[types.mes.mobile.LessonScheduleItem, types.myschool.mobile.LessonScheduleItems]
-LessonHomework = Union[
-    types.mes.mobile.lesson_schedule_item.LessonHomework,
-    types.myschool.mobile.lesson_schedule_items.LessonHomework
-]
-Mark = Union[
-    types.mes.mobile.lesson_schedule_item.Mark,
-    types.myschool.mobile.lesson_schedule_items.Mark
-]
+LessonScheduleItem = types.mobile.LessonScheduleItem
+LessonHomework = types.mobile.lesson_schedule_item.LessonHomework
+Mark = types.mobile.lesson_schedule_item.Mark
 
 
-def day_schedule_info(events: EventsResponse, from_db, *, inline: bool = False, exclude_marks: bool = False):
+def day_schedule_info(events: api.APIResponse[EventsResponse], *, inline: bool = False, exclude_marks: bool = False):
     days_lessons = {}
 
     def weekday(x):
@@ -51,11 +45,11 @@ def day_schedule_info(events: EventsResponse, from_db, *, inline: bool = False, 
 
     available_other_source: dict[str, list[str]] = {}
 
-    for event in events.response:
+    for event in events.response.response:
         is_event = False
 
-        start = datetime.strptime(event.start_at, "%Y-%m-%dT%H:%M:%S%z")
-        end = datetime.strptime(event.finish_at, "%Y-%m-%dT%H:%M:%S%z")
+        start = event.start_at
+        end = event.finish_at
 
         date = start.date()
         date_str = f"{date.day:02}.{date.month:02}/{date.weekday()}"
@@ -138,10 +132,9 @@ def day_schedule_info(events: EventsResponse, from_db, *, inline: bool = False, 
             )
 
     return {
-        date_str.split("/")[0]: Texts.SCHEDULE_FOR_DAY(
+        (Texts.FROM_CACHE(events.last_cache_time) if events.is_cache else "") + date_str.split("/")[0]: Texts.SCHEDULE_FOR_DAY(
             WEEKDAY=date_str.split("/")[0],
             DAY=weekday(date_str.split("/")[1]),
-            from_db=from_db
         ) + "\n".join(lessons) + Texts.LESSON_INFO_DETAIL(
             PREFIX="/" if not inline else "@OctoDiaryBot "
         ) + (
@@ -224,7 +217,7 @@ def lesson_info(lesson: LessonScheduleItem) -> str:
 @apis_and_user
 async def schedule(
         update: Message | CallbackQuery,
-        apis: MesAPIs | MySchoolAPIs,
+        apis: APIs,
         user: User,
         *,
         is_inline: bool = False
@@ -236,20 +229,15 @@ async def schedule(
     else:
         response = update
 
-    from_db = ""
-    try:
-        today = get_date()
-        events = await api.get_events(
-            user=user,
-            apis=apis,
-            begin_date=today - timedelta(days=-1 * (0 - today.weekday())),
-            end_date=today + timedelta(days=14 + (6 - today.weekday()))
-        )
-    except APIError:
-        events = user.db_events
-        from_db = Texts.FROM_DB
+    today = get_date()
+    events = await api.get_events(
+        user=user,
+        apis=apis,
+        begin_date=today - timedelta(days=-1 * (0 - today.weekday())),
+        end_date=today + timedelta(days=14 + (6 - today.weekday()))
+    )
 
-    strings = day_schedule_info(events, from_db, inline=is_inline)
+    strings = day_schedule_info(events, inline=is_inline)
     await update.bot.inline.list(
         response,
         row_width=5,
@@ -278,7 +266,7 @@ async def schedule(
 @apis_and_user
 async def get_lesson_info(
         update: Message | CallbackQuery,
-        apis: MesAPIs | MySchoolAPIs,
+        apis: APIs,
         user: User,
         command: CommandObject = None,
         lesson_id: Optional[str] = None,

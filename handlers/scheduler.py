@@ -11,11 +11,10 @@ from aiogram.filters import Command
 from aiogram.types import Message
 
 import api
-from apis import MesAPIs, MySchoolAPIs
+from apis import APIs
 from database import User
 from handlers.router import router
 from handlers.schedule import day_schedule_info
-from octodiary.exceptions import APIError
 from utils.filters import apis_and_user
 from utils.other import TIMEZONE, get_date, handler, sort_dict_by_date
 from utils.texts import Texts
@@ -24,7 +23,7 @@ from utils.texts import Texts
 @router.message(Command("enable_scheduler"))
 @handler()
 @apis_and_user
-async def enable_scheduler_cmd(message: Message, apis: MesAPIs | MySchoolAPIs, user: User, bot: Bot):
+async def enable_scheduler_cmd(message: Message, apis: APIs, user: User, bot: Bot):
     """Enable scheduler for current chat"""
 
     if message.chat.type == ChatType.PRIVATE:
@@ -100,7 +99,7 @@ async def disable_scheduler_cmd(message: Message, user: User, apis):
 
 async def run_scheduler_for_chat(
         chat_id: str,
-        apis: MesAPIs | MySchoolAPIs,
+        apis: APIs,
         user: User,
         bot: Bot,
         *,
@@ -138,7 +137,8 @@ async def run_scheduler_for_chat(
         ]
     ]
 
-    for index, week_events in enumerate(weeks):
+    for index, week_events_data in enumerate(weeks):
+        week_events = week_events_data.response
         if week_events.total_count == 0:
             continue
 
@@ -164,8 +164,7 @@ async def run_scheduler_for_chat(
             **(
                 sort_dict_by_date(
                     dictionary=day_schedule_info(
-                        events=week_events,
-                        from_db="",
+                        events=week_events_data,
                         inline=True,
                         exclude_marks=True
                     )

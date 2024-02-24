@@ -9,19 +9,19 @@ from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 
 import api
-from apis import MesAPIs, MySchoolAPIs
+from apis import APIs
 from database import User
 from handlers.router import router
 from inline.types import AdditionalButtons
-from octodiary.types.myschool.mobile import ShortHomeworks
+from octodiary.types.mobile import ShortHomeworks
 from utils.filters import apis_and_user
 from utils.other import handler, sort_dict_by_date
 from utils.texts import Texts
 
 
-def homeworks_info(homeworks: ShortHomeworks):
+def homeworks_info(response: api.APIResponse[ShortHomeworks]):
     days = {}
-    for homework in homeworks.payload:
+    for homework in response.response.payload:
         if (date_str := homework.date.strftime("%d.%m")) not in days:
             days[date_str] = {}
 
@@ -31,7 +31,9 @@ def homeworks_info(homeworks: ShortHomeworks):
         days[date_str][homework.subject_name] += [f"<code>{homework.description}</code>"]
 
     return {
-        date_str: Texts.HOMEWORKS_FOR_DATE(DATE=date_str) + "\n".join([
+        date_str: (
+            Texts.FROM_CACHE(response.last_cache_time) if response.is_cache else ""
+        ) + Texts.HOMEWORKS_FOR_DATE(DATE=date_str) + "\n".join([
             f"• <b>{subject}</b>"
             + (
                 ("\n   ├ " if len(homeworks) > 1 else "")
@@ -50,7 +52,7 @@ def homeworks_info(homeworks: ShortHomeworks):
 @apis_and_user
 async def homeworks_upcoming(
         update: Message | CallbackQuery,
-        apis: MesAPIs | MySchoolAPIs,
+        apis: APIs,
         user: User,
         *,
         is_inline: bool = False
@@ -62,7 +64,7 @@ async def homeworks_upcoming(
     else:
         response = update
 
-    homeworks = await api.get_homeworks(user=user, apis=apis, type=api.HomeworkTypes.UPCOMING)
+    response_data = await api.get_homeworks(user=user, apis=apis, type=api.HomeworkTypes.UPCOMING)
 
     await update.bot.inline.list(
         update=response,
@@ -80,7 +82,7 @@ async def homeworks_upcoming(
                 "disable_deadline": True
             }
         ),
-        **sort_dict_by_date(homeworks_info(homeworks)),
+        **sort_dict_by_date(homeworks_info(response_data)),
     )
 
     if isinstance(update, CallbackQuery):
@@ -93,7 +95,7 @@ async def homeworks_upcoming(
 @apis_and_user
 async def homeworks_past(
         update: Message | CallbackQuery,
-        apis: MesAPIs | MySchoolAPIs,
+        apis: APIs,
         user: User,
         *,
         is_inline: bool = False
@@ -105,7 +107,7 @@ async def homeworks_past(
     else:
         response = update
 
-    homeworks = await api.get_homeworks(user=user, apis=apis, type=api.HomeworkTypes.PAST)
+    response_data = await api.get_homeworks(user=user, apis=apis, type=api.HomeworkTypes.PAST)
 
     await update.bot.inline.list(
         update=response,
@@ -123,7 +125,7 @@ async def homeworks_past(
                 "disable_deadline": True
             }
         ),
-        **sort_dict_by_date(homeworks_info(homeworks), reverse=True)
+        **sort_dict_by_date(homeworks_info(response_data), reverse=True)
     )
 
     if isinstance(update, CallbackQuery):

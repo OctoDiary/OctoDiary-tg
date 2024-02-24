@@ -3,18 +3,10 @@
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
 
-from octodiary.asyncApi.mes import AsyncMobileAPI as MesAsyncMobileAPI
-from octodiary.asyncApi.myschool import AsyncMobileAPI as MySchoolAsyncMobileAPI
-from octodiary.asyncApi.myschool import AsyncWebAPI as MySchoolAsyncWebAPI
+from octodiary.apis import AsyncMobileAPI, AsyncWebAPI
 
 
-class MesAPIs:
-    def __init__(self, token: str) -> None:
-        self.mobile: MesAsyncMobileAPI = MesAsyncMobileAPI(token)
-        self.web = None
-
-
-class MySchoolAPIs:
-    def __init__(self, token: str) -> None:
-        self.mobile: MySchoolAsyncMobileAPI = MySchoolAsyncMobileAPI(token)
-        self.web: MySchoolAsyncWebAPI = MySchoolAsyncWebAPI(token)
+class APIs:
+    def __init__(self, token: str, system: str) -> None:
+        self.mobile: AsyncMobileAPI = AsyncMobileAPI(token=token, system=system)
+        self.web: AsyncWebAPI = AsyncWebAPI(token=token, system=system)

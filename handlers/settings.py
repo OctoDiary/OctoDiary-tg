@@ -11,7 +11,7 @@ from aiogram.enums import ChatType
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, FSInputFile, Message
 
-from apis import MesAPIs, MySchoolAPIs
+from apis import APIs
 from database import User
 from handlers.router import router
 from utils.filters import apis_and_user
@@ -22,7 +22,7 @@ TEXT = Texts.SETTINGS
 NOTIFICATIONS = Texts.SETTINGS_NOTIFICATIONS
 
 
-def markup(user: User, apis: MesAPIs | MySchoolAPIs, section: Optional[str] = None):
+def markup(user: User, apis: APIs, section: Optional[str] = None):
     return (
         [
             [
@@ -99,7 +99,7 @@ def markup(user: User, apis: MesAPIs | MySchoolAPIs, section: Optional[str] = No
 @router.message(F.text == Texts.Buttons.SETTINGS, F.chat.type == ChatType.PRIVATE)
 @handler()
 @apis_and_user
-async def settings(update: Message | CallbackQuery, apis: MesAPIs | MySchoolAPIs, user: User):
+async def settings(update: Message | CallbackQuery, apis: APIs, user: User):
     """Settings menu"""
 
     return await update.bot.inline.answer(
@@ -111,7 +111,7 @@ async def settings(update: Message | CallbackQuery, apis: MesAPIs | MySchoolAPIs
 
 
 @handler()
-async def goals(update: CallbackQuery, apis: MesAPIs | MySchoolAPIs, user: User):
+async def goals(update: CallbackQuery, apis: APIs, user: User):
     settings_data = user.db_settings
     settings_data["goals"] = not settings_data.get("goals", False)
     user.db_settings = settings_data
@@ -123,7 +123,7 @@ async def goals(update: CallbackQuery, apis: MesAPIs | MySchoolAPIs, user: User)
 
 
 @handler()
-async def notifications(update: CallbackQuery, apis: MesAPIs | MySchoolAPIs, user: User, attr: Optional[str] = None):
+async def notifications(update: CallbackQuery, apis: APIs, user: User, attr: Optional[str] = None):
     if attr:
         settings_data = user.db_settings
         settings_data["notifications"] = settings_data.get("notifications", {})
@@ -164,7 +164,7 @@ async def send_app_auth(update: CallbackQuery, user: User):
 
 
 @handler()
-async def choose_child_profile_menu(update: CallbackQuery, apis: MesAPIs | MySchoolAPIs, user: User):
+async def choose_child_profile_menu(update: CallbackQuery, apis: APIs, user: User):
     if str(update.from_user.id) != user.id:
         return
 
@@ -176,7 +176,7 @@ async def choose_child_profile_menu(update: CallbackQuery, apis: MesAPIs | MySch
 
 
 @handler()
-async def choose_child_profile(update: CallbackQuery, apis: MesAPIs | MySchoolAPIs, user: User, child: dict):
+async def choose_child_profile(update: CallbackQuery, apis: APIs, user: User, child: dict):
     if str(update.from_user.id) != user.id:
         return
 

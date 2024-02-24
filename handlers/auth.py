@@ -21,8 +21,7 @@ from aiogram.types import (
 
 from database import Database
 from handlers.loop import save_user_data
-from octodiary.asyncApi.mes import AsyncMobileAPI as MESMobileAPI
-from octodiary.asyncApi.myschool import AsyncMobileAPI as MySchoolMobileAPI
+from octodiary.apis import AsyncMobileAPI
 from octodiary.exceptions import APIError
 from octodiary.types.captcha import Captcha
 from octodiary.types.enter_sms_code import EnterSmsCode
@@ -77,20 +76,10 @@ async def check_token_and_send_confirm(message: Message, token: str, state: FSMC
     data = await state.get_data()
 
     try:
-        match data["system"]:
-            case Texts.Systems.MES:
-                api = MESMobileAPI(token=token)
-                user_api = await api.get_users_profiles_info()
-                profile_id = user_api[0].id
-                profile = (await api.get_family_profile(profile_id)).profile
-            case Texts.Systems.MY_SCHOOL:
-                api = MySchoolMobileAPI(token=token)
-                user_api = await api.get_users_profile_info()
-                profile_id = user_api[0].id
-                profile = (await api.get_profile(profile_id)).profile
-            case _:
-                await state.clear()
-                return
+        api = AsyncMobileAPI(system=data["system"], token=token)
+        user_api = await api.get_users_profile_info()
+        profile_id = user_api[0].id
+        profile = (await api.get_family_profile(profile_id)).profile
 
         match profile.type:
             case "student":
@@ -137,26 +126,24 @@ async def auth(message: Message, state: FSMContext):
 
 @auth_router.message(Form.system, AuthFilter())
 async def set_system(message: Message, state: FSMContext):
-    match message.text:
-        case Texts.MES:
-            await state.update_data(
-                system=Texts.Systems.MES
-            )
-            await state.set_state(Form.auth_type)
-            await message.answer(
-                Texts.Authorization.SELECT_LOGIN_TYPE,
-                reply_markup=AUTH_LOGIN_TYPE_MES
-            )
+    if message.text == Texts.MES:
+        system = Texts.Systems.MES
+        reply_markup = AUTH_LOGIN_TYPE_MES
+    elif message.text == Texts.MY_SCHOOL:
+        system = Texts.Systems.MY_SCHOOL
+        reply_markup = AUTH_LOGIN_TYPE_MY_SCHOOL
+    else:
+        return
 
-        case Texts.MY_SCHOOL:
-            await state.update_data(
-                system=Texts.Systems.MY_SCHOOL
-            )
-            await state.set_state(Form.auth_type)
-            await message.answer(
-                Texts.Authorization.SELECT_LOGIN_TYPE,
-                reply_markup=AUTH_LOGIN_TYPE_MY_SCHOOL
-            )
+    await state.update_data(
+        system=system
+    )
+
+    await state.set_state(Form.auth_type)
+    await message.answer(
+        Texts.Authorization.SELECT_LOGIN_TYPE,
+        reply_markup=reply_markup
+    )
 
 
 @auth_router.message(Form.auth_type, AuthFilter())
@@ -181,7 +168,7 @@ async def set_login_type(message: Message, state: FSMContext):
                 await state.clear()
                 await message.answer(
                     Texts.Authorization.NOT_SUPPORTED,
-                reply_markup=CANCEL
+                    reply_markup=CANCEL
                 )
                 return
 
@@ -338,7 +325,7 @@ async def send_captcha(
 
 
 async def send_mfa_user_request(
-        api: MySchoolMobileAPI,
+        api: AsyncMobileAPI,
         message: Message
 ):
     mfa_method = api._mfa_details["type"]
@@ -353,7 +340,6 @@ async def send_mfa_user_request(
         await message.answer(text=Texts.Authorization.MFA_ENTER_TTP, reply_markup=CANCEL)
 
 
-
 @auth_router.message(Form.password)
 async def set_password(message: Message, state: FSMContext, bot: Bot):
     await state.update_data(password=message.text)
@@ -361,7 +347,7 @@ async def set_password(message: Message, state: FSMContext, bot: Bot):
 
     match data["system"]:
         case Texts.Systems.MY_SCHOOL:
-            api = MySchoolMobileAPI()
+            api = AsyncMobileAPI(system=Texts.Systems.MY_SCHOOL)
             try:
                 response = (
                     await api.esia_login(username=data["username"], password=data["password"])
@@ -369,7 +355,7 @@ async def set_password(message: Message, state: FSMContext, bot: Bot):
                     else await api.login(username=data["username"], password=data["password"])
                 )
             except APIError as e:
-                if e.error_type in ["INVALID_PASSWORD", "authentication_error"]:
+                if any(i == e.error_types for i in ["INVALID_PASSWORD", "authentication_error"]):
                     await state.update_data(username=None, password=None)
                     await state.set_state(Form.username)
                     await message.answer(
@@ -391,11 +377,11 @@ async def set_password(message: Message, state: FSMContext, bot: Bot):
                     response_msg = await message.answer(Texts.LOADING, reply_markup=CANCEL)
                     await check_token_and_send_confirm(response_msg, response, state)
         case Texts.Systems.MES:
-            api = MESMobileAPI()
+            api = AsyncMobileAPI(system=Texts.Systems.MES)
             try:
                 response = await api.login(username=data["username"], password=data["password"])
             except APIError as e:
-                match e.error_type:
+                match e.error_types:
                     case "InvalidCredentials":
                         await state.update_data(username=None, password=None)
                         await state.set_state(Form.username)
@@ -439,10 +425,10 @@ async def set_gosuslugi_mfa(message: Message, state: FSMContext, bot: Bot):
 
     data = await state.get_data()
     try:
-        api: MySchoolMobileAPI = data["api"]
+        api: AsyncMobileAPI = data["api"]
         response = await api.esia_enter_MFA(code=int(message.text))
     except APIError as e:
-        if e.error_type in ["INVALID_TTP", "INVALID_OTP"]:
+        if e.error_types in ["INVALID_TTP", "INVALID_OTP"]:
             await state.clear()
             await message.answer(text=Texts.Authorization.INVALID_MFA)
         else:
@@ -459,7 +445,7 @@ async def set_gosuslugi_mfa(message: Message, state: FSMContext, bot: Bot):
 
 
 @auth_router.message(Form.gosuslugi_captcha)
-async def asnwer_gosuslugi_captcha(message: Message, state: FSMContext, bot: Bot):
+async def answer_gosuslugi_captcha(message: Message, state: FSMContext, bot: Bot):
     data = await state.get_data()
     captcha: Captcha = data["captcha"]
 
@@ -470,7 +456,7 @@ async def asnwer_gosuslugi_captcha(message: Message, state: FSMContext, bot: Bot
             else captcha.async_verify_captcha
         )(message.text)
     except APIError as e:
-        if e.error_type == "INVALID_PASSWORD":
+        if e.error_types == "INVALID_PASSWORD":
             await state.update_data(username=None, password=None)
             await state.set_state(Form.username)
             await message.answer(
@@ -504,7 +490,7 @@ async def set_blitz_otp(message: Message, state: FSMContext):
     try:
         response: str = await enter_code.async_enter_code(message.text)
     except APIError as e:
-        match e.error_type:
+        match e.error_types:
             case "InvalidOTP":
                 await message.answer(text=Texts.Authorization.BLITZ_INVALID_CODE(
                     ATTEMPTS=pluralization_string(e.details["remain_attempts"], ["попытка", "попытки", "попыток"]),
@@ -548,6 +534,12 @@ async def confirm(message: Message, state: FSMContext):
             user.db_profile_id = data["profile_id"]
             user.db_token = data["token"]
             user.db_system = data["system"]
+            if data["system"] == Texts.Systems.MES:
+                user.refresh_data = {
+                    "client_id": data["api"].client_id,
+                    "client_secret": data["api"].client_secret,
+                    "token": data["api"].token_for_refresh
+                }
             user.db_settings = {
                 "goals": False,
                 "notifications": {
@@ -555,9 +547,8 @@ async def confirm(message: Message, state: FSMContext):
                 }
             }
             user.db_skip_notifications = True
-            user.db_notified_ids = []
 
-            await save_user_data(str(message.from_user.id))
+            await save_user_data(str(message.from_user.id), bot=message.bot)
 
             await state.clear()
 

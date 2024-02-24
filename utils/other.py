@@ -264,4 +264,8 @@ TIMEZONE = timezone(timedelta(hours=3), "MSK")
 
 
 def get_date():
-    return datetime.now(tz=TIMEZONE).date()
+    return get_datetime().date()
+
+
+def get_datetime():
+    return datetime.now(tz=TIMEZONE)

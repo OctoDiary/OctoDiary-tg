@@ -10,11 +10,11 @@ from aiogram.enums import ChatType
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 
-from apis import MesAPIs
+from apis import APIs
 from database import Database, User
 from handlers.router import router
 from octodiary.exceptions import APIError
-from octodiary.types.mes.mobile import Visits
+from octodiary.types.mobile import Visits
 from utils.filters import apis_and_user
 from utils.other import get_date, handler
 from utils.texts import Texts
@@ -44,7 +44,7 @@ def visits_info(visits: Visits) -> str:
 )
 @handler()
 @apis_and_user
-async def visits_cmd(update: Message | CallbackQuery, apis: MesAPIs, user: User, *, is_inline: bool = False):
+async def visits_cmd(update: Message | CallbackQuery, apis: APIs, user: User, *, is_inline: bool = False):
     """Visits information"""
     if not is_inline:
         response = await update.bot.inline.answer(update, Texts.LOADING)

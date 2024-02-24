@@ -11,7 +11,7 @@ from aiogram.types import User as AiogramUser
 from database import Database, User
 from utils.texts import Texts
 
-from apis import MesAPIs, MySchoolAPIs
+from apis import APIs
 
 
 class AuthFilter(Filter):
@@ -31,13 +31,7 @@ def is_authorized(user: AiogramUser):
 
 
 def user_apis(user: User):
-    return (
-        MesAPIs(user.token)
-        if user.system == Texts.Systems.MES
-        else MySchoolAPIs(user.token)
-        if user.system == Texts.Systems.MY_SCHOOL
-        else None
-    )
+    return APIs(token=user.token, system=user.system)
 
 
 def apis_and_user(func):

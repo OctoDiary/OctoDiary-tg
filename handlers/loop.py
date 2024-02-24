@@ -5,70 +5,132 @@
 
 import asyncio
 import datetime
+from contextlib import suppress
 from datetime import timedelta
 
 import jwt
 from aiogram import Bot, Router, exceptions
 
 import api
-from apis import MesAPIs, MySchoolAPIs
+from apis import APIs
 from database import Database
 from handlers.scheduler import run_scheduler_for_chat
 from loop import loop
-from octodiary.asyncApi.myschool import AsyncWebAPI
 from octodiary.exceptions import APIError
-from octodiary.types.mes.mobile.marks import Payload
-from octodiary.types.myschool.mobile import EventsResponse
-from octodiary.types.myschool.mobile.marks import PayloadItem
+from octodiary.types.mobile import EventsResponse
+from octodiary.types.mobile.marks import Payload
 from utils.filters import user_apis
-from utils.other import TIMEZONE, get_date, mark, pluralization_string
+from utils.other import TIMEZONE, get_date, get_datetime, mark, pluralization_string
 from utils.texts import Texts
 
 db = Database()
 LoopRouter = Router()
 
 
-async def save_user_data(user_id):
+async def save_user_data(user_id, bot: Bot):
     user = db.user(str(user_id))
 
     try:
-        if user.system == Texts.Systems.MY_SCHOOL:
-            apis = MySchoolAPIs(token=user.token)
-        else:
-            apis = MesAPIs(token=user.token)
+        apis = APIs(token=user.token, system=user.system)
 
-        profile_id = (await api.get_profile_users_info(user=user, apis=apis))[0].id
-        profile = await api.get_profile(user=user, profile_id=profile_id, apis=apis)
+        profile_id = (await api.get_profile_users_info(apis=apis))[0].id
+        profile = (await api.get_profile(user=user, profile_id=profile_id, apis=apis)).response
 
         user.db_profile_id = profile_id
         user.db_profile = profile.model_dump(
+            mode="json",
             exclude={"children": {"__all__": {"groups"}, "hash": True}},
             exclude_none=True,
             exclude_unset=True,
         )
 
         today = get_date()
-        events: EventsResponse = await api.get_events(
-            user=user,
-            apis=apis,
-            begin_date=today - timedelta(days=-1 * (0 - today.weekday())),
-            end_date=today + timedelta(days=7 + (6 - today.weekday())),
-            profile=profile
-        )
-        user.db_events = events.model_dump(
-            exclude={"response": {"__all__": {"materials", "class_unit_ids"}}},
-            exclude_none=True,
-            exclude_unset=True,
-        )
-    except APIError:
-        pass
+        events: EventsResponse = (
+            await api.get_events(
+                user=user,
+                apis=apis,
+                begin_date=today - timedelta(days=-1 * (0 - today.weekday())),
+                end_date=today + timedelta(days=7 + (6 - today.weekday())),
+                profile=profile
+            )
+        ).response
+
+        cache = {
+            "profile": user.db_profile,
+            "events": events.model_dump(
+                mode="json",
+                exclude={"response": {"__all__": {"class_unit_ids"}}},
+                exclude_none=True,
+                exclude_unset=True,
+            ),
+            "homeworks": {
+                "upcoming": (
+                    await api.get_homeworks(user=user, apis=apis, type=api.HomeworkTypes.UPCOMING)
+                ).response.model_dump(mode="json", exclude_none=True, exclude_unset=True),
+                "past": (
+                    await api.get_homeworks(user=user, apis=apis, type=api.HomeworkTypes.PAST)
+                ).response.model_dump(mode="json", exclude_none=True, exclude_unset=True)
+            },
+            "marks": {
+                "by_date": (
+                    await api.get_marks(
+                        user=user,
+                        apis=apis,
+                        from_date=get_date() - timedelta(days=14),
+                        to_date=get_date(),
+                    )
+                ).response.model_dump(mode="json", exclude_none=True, exclude_unset=True),
+                "by_subject": (
+                    await api.get_subjects_marks(user=user, apis=apis)
+                ).response.model_dump(mode="json", exclude_none=True, exclude_unset=True)
+            },
+            "rating": {
+                "class": [
+                    x.model_dump(mode="json", exclude_none=True, exclude_unset=True)
+                    for x in (
+                        await api.get_rating(user=user, apis=apis, type=api.RatingType.CLASS)
+                    ).response
+                ],
+                "subjects": [
+                    x.model_dump(mode="json", exclude_none=True, exclude_unset=True)
+                    for x in (
+                        await api.get_rating(user=user, apis=apis, type=api.RatingType.SUBJECTS)
+                    ).response
+                ],
+            },
+            "class_members": [
+                i.model_dump(mode="json", exclude_none=True, exclude_unset=True)
+                for i in (
+                    await api.get_class_members(user=user, apis=apis)
+                ).response
+            ],
+            "time": get_datetime().strftime("%Y-%m-%d %H:%M:%S"),
+        }
+
+        user.cache = cache
+
+        if user.get("server-is-not-available-notified-id", 0):
+            await bot.send_message(int(user_id), Texts.Errors.SERVER_IS_AVAILABLE, reply_to_message_id=user[
+                "server-is-not-available-notified-id"
+            ])
+            del user["server-is-not-available-notified-id"]
+    except APIError as e:
+        if e.status_code >= 500 and not user.get("server-is-not-available-notified-id", 0):
+            message = await bot.send_message(
+                int(user_id),
+                Texts.Errors.SERVER_IS_NOT_AVAILABLE.format(
+                    SYSTEM=Texts.MES if user.system == Texts.Systems.MES else Texts.MY_SCHOOL,
+                    STATUS_CODE=e.status_code,
+                ),
+            )
+            user["server-is-not-available-notified-id"] = message.message_id
 
 
 @LoopRouter.startup()
 @loop(900)
-async def save_users_data_loop(**kwargs):
+async def save_users_data_loop(bot: Bot, **kwargs):
     for func in [
-        save_user_data(user_id)
+        save_user_data(user_id, bot)
         for user_id in db.keys()
         if user_id.isdigit() and db.user(user_id).system in [
             Texts.Systems.MY_SCHOOL,
@@ -79,7 +141,7 @@ async def save_users_data_loop(**kwargs):
 
 
 def generate_text_notification(
-        mark_data: PayloadItem | Payload,
+        mark_data: Payload,
         *,
         edited: bool = False,
         old_mark_value: str = "",
@@ -144,7 +206,7 @@ async def check_user_notifications(user_id, bot: Bot):
                             to_date=get_date(),
                             student_id=child["id"],
                         )
-                    ).payload,
+                    ).response.payload,
                     key=lambda x: datetime.datetime.fromisoformat(x.updated_at),
                     reverse=True
                 )
@@ -194,10 +256,7 @@ async def send_notifications(bot: Bot, **kwargs):
     for func in [
         check_user_notifications(user_id, bot)
         for user_id in db.keys()
-        if user_id.isdigit() and db.user(user_id).system in [
-            Texts.Systems.MY_SCHOOL,
-            Texts.Systems.MES
-        ] and db.user(user_id).token
+        if user_id.isdigit() and db.user(user_id).system and db.user(user_id).token
     ]:
         await func
 
@@ -208,7 +267,7 @@ async def refresh_tokens(**kwargs):
     for user in {
         db.user(user_id)
         for user_id in db.keys()
-        if user_id.isdigit() and db.get_key(user_id, "system", None) == Texts.Systems.MY_SCHOOL
+        if user_id.isdigit() and db.get_key(user_id, "system", None)
     }:
         await asyncio.sleep(1)
         exp = datetime.datetime.fromtimestamp(
@@ -216,7 +275,17 @@ async def refresh_tokens(**kwargs):
         )
         now = datetime.datetime.now(tz=TIMEZONE)
         if abs(exp - now).total_seconds() <= 3600:
-            user.token = await AsyncWebAPI(token=user.token).refresh_token(0, 0)
+            with (suppress(Exception)):
+                user.token = APIs(
+                    token=user.token,
+                    system=user.system
+                ).mobile.refresh_token(
+                    **(
+                        user.refresh_data
+                        if user.system == Texts.Systems.MES
+                        else {}
+                    )
+                )
 
 
 @LoopRouter.startup()
@@ -225,10 +294,7 @@ async def scheduler_loop(bot: Bot, **kwargs):
     for user in {
         db.user(user_id)
         for user_id in db.keys()
-        if user_id.isdigit() and db.user(user_id).system in [
-            Texts.Systems.MY_SCHOOL,
-            Texts.Systems.MES
-        ] and db.user(user_id).token
+        if user_id.isdigit() and db.user(user_id).system
     }:
         await asyncio.sleep(1)
         scheduler = user.db_scheduler
@@ -238,11 +304,7 @@ async def scheduler_loop(bot: Bot, **kwargs):
         for chat_id in scheduler:
             await run_scheduler_for_chat(
                 chat_id=chat_id,
-                apis=(
-                    MesAPIs(token=user.token)
-                    if user.system == Texts.Systems.MES
-                    else MySchoolAPIs(token=user.token)
-                ),
+                apis=APIs(token=user.token, system=user.system),
                 user=user,
                 bot=bot,
             )

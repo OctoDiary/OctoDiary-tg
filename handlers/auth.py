@@ -3,12 +3,13 @@
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
 import re
+from contextlib import suppress
 from datetime import date
 
 import requests
 from aiogram import Bot, F, Router
 from aiogram.enums import ChatType
-from aiogram.filters import Command
+from aiogram.filters import Command, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import (
@@ -110,9 +111,12 @@ async def check_token_and_send_confirm(message: Message, token: str, state: FSMC
         await message.answer(text=Texts.Authorization.ERROR_TRY_AGAIN(ERROR=str(e)))
 
 
-@auth_router.message(Command(commands=["auth", "login"]))
-async def auth(message: Message, state: FSMContext):
-    if Database().user(str(message.from_user.id)).token:
+@auth_router.message(Command(commands=["auth", "login", "reauth"]))
+async def auth(message: Message, state: FSMContext, command: CommandObject):
+    if command.command == "reauth":
+        with suppress(Exception):
+            Database().pop(str(message.from_user.id))
+    elif Database().user(str(message.from_user.id)).token:
         await message.answer(Texts.Authorization.ALREADY_AUTHORIZED)
         return
 

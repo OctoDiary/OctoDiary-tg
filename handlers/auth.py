@@ -57,8 +57,12 @@ class Form(StatesGroup):
     confirm = State()
 
 
+@auth_router.message(Command("cancel"))
 @auth_router.message(F.text == Texts.Buttons.CANCEL)
 async def cancel(message: Message, state: FSMContext):
+    if not await state.get_state():
+        return
+
     await state.clear()
     await message.answer(
         text=Texts.Authorization.CANCEL,

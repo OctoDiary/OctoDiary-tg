@@ -2,9 +2,9 @@
 #          Licensed under the MIT License
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
+
 import re
 from contextlib import suppress
-from datetime import date
 
 import requests
 from aiogram import Bot, F, Router
@@ -21,7 +21,7 @@ from aiogram.types import (
 )
 
 from database import Database
-from handlers.loop import save_user_data, ODAuth
+from handlers.loop import save_user_data
 from octodiary.apis import AsyncMobileAPI
 from octodiary.exceptions import APIError
 from octodiary.types.captcha import Captcha
@@ -36,7 +36,7 @@ from utils.keyboard import (
     DEFAULT_MES,
     YES_OR_NO,
 )
-from utils.other import get_hash, pluralization_string
+from utils.other import ODAuth, get_date, get_hash, pluralization_string
 from utils.texts import Texts
 
 auth_router = Router()
@@ -386,6 +386,7 @@ async def set_password(message: Message, state: FSMContext, bot: Bot):
                     await check_token_and_send_confirm(response_msg, response, state)
         case Texts.Systems.MES:
             api = AsyncMobileAPI(system=Texts.Systems.MES)
+            await state.update_data(auth_api=api)
             try:
                 response = await api.login(username=data["username"], password=data["password"])
             except APIError as e:
@@ -535,8 +536,8 @@ async def confirm(message: Message, state: FSMContext):
                 list({*db.settings.get("users", []), message.from_user.id})
             )
             db.settings.set(
-                f"new-users-month:{date.today().month}",
-                db.settings.get(f"new-users-month:{date.today().month}", 0) + 1
+                f"new-users-month:{get_date().month}",
+                db.settings.get(f"new-users-month:{get_date().month}", 0) + 1
             )
             user.db_users_profile_info = [prof.model_dump() for prof in data["users_profile_info"]]
             user.db_profile_id = data["profile_id"]
@@ -544,12 +545,14 @@ async def confirm(message: Message, state: FSMContext):
             user.db_system = data["system"]
 
             if data["system"] == Texts.Systems.MES:
-                await data["api"].edit_user_settings_app(ODAuth(
+                od_auth_settings = ODAuth(
                     access_token=data["token"],
-                    refresh_token=data["api"].token_for_refresh,
-                    client_id=data["api"].client_id,
-                    client_secret=data["api"].client_secret
-                ), name="od_auth", profile_id=data["profile_id"])
+                    refresh_token=data["auth_api"].token_for_refresh,
+                    client_id=data["auth_api"].client_id,
+                    client_secret=data["auth_api"].client_secret
+                )
+                await data["api"].edit_user_settings_app(od_auth_settings, name="od_auth", profile_id=data["profile_id"])
+                user.db_od_auth = od_auth_settings.model_dump(mode="json")
 
             user.db_settings = {
                 "goals": False,

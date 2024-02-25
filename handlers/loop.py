@@ -17,25 +17,15 @@ from apis import APIs
 from database import Database
 from handlers.scheduler import run_scheduler_for_chat
 from loop import loop
-from octodiary.apis import AsyncMobileAPI
 from octodiary.exceptions import APIError
-from octodiary.types import Type
 from octodiary.types.mobile import EventsResponse
 from octodiary.types.mobile.marks import Payload
-from octodiary.urls import Systems
 from utils.filters import user_apis
-from utils.other import TIMEZONE, get_date, get_datetime, mark, pluralization_string
+from utils.other import TIMEZONE, get_date, get_datetime, mark, pluralization_string, refresh_mes_token
 from utils.texts import Texts
 
 db = Database()
 LoopRouter = Router()
-
-
-class ODAuth(Type):
-    client_id: str
-    client_secret: str
-    access_token: str
-    refresh_token: str
 
 
 async def save_user_data(user_id, bot: Bot):
@@ -135,6 +125,8 @@ async def save_user_data(user_id, bot: Bot):
                 ),
             )
             user["server-is-not-available-notified-id"] = message.message_id
+        elif e.status_code == 401 and user.system == Texts.Systems.MES:
+            await refresh_mes_token(user=user, is_expired=True)
 
 
 @LoopRouter.startup()
@@ -276,6 +268,28 @@ async def send_notifications(bot: Bot, **kwargs):
 
 
 @LoopRouter.startup()
+@loop(900)
+async def scheduler_loop(bot: Bot, **kwargs):
+    for user in {
+        db.user(user_id)
+        for user_id in db.keys()
+        if user_id.isdigit() and db.user(user_id).system
+    }:
+        await asyncio.sleep(1)
+        scheduler = user.db_scheduler
+        if not scheduler:
+            continue
+
+        for chat_id in scheduler:
+            await run_scheduler_for_chat(
+                chat_id=chat_id,
+                apis=APIs(token=user.token, system=user.system),
+                user=user,
+                bot=bot,
+            )
+
+
+@LoopRouter.startup()
 @loop(60)
 async def refresh_tokens(**kwargs):
     for user in {
@@ -296,47 +310,5 @@ async def refresh_tokens(**kwargs):
                         system=user.system
                     ).mobile.refresh_token()
             else:
-                apis = APIs(token=user.token, system=user.system)
-                auth_settings = await apis.mobile.get_user_settings_app(
-                    profile_id=user.db_profile_id,
-                    name="od_auth",
-                    settings_model=ODAuth
-                )
-                if auth_settings.access_token != user.token:
-                    user.token = auth_settings.access_token
-                else:
-                    _api = AsyncMobileAPI(system=Systems.MES)
-                    token = await _api.refresh_token(
-                        token=auth_settings.refresh_token,
-                        client_id=auth_settings.client_id,
-                        client_secret=auth_settings.client_secret
-                    )
-                    user.token = token
-                    await apis.mobile.edit_user_settings_app(ODAuth(
-                        access_token=token,
-                        refresh_token=_api.token_for_refresh,
-                        client_id=auth_settings.client_id,
-                        client_secret=auth_settings.client_secret
-                    ), name="od_auth", profile_id=user.db_profile_id)
+                await refresh_mes_token(user=user)
 
-
-@LoopRouter.startup()
-@loop(900)
-async def scheduler_loop(bot: Bot, **kwargs):
-    for user in {
-        db.user(user_id)
-        for user_id in db.keys()
-        if user_id.isdigit() and db.user(user_id).system
-    }:
-        await asyncio.sleep(1)
-        scheduler = user.db_scheduler
-        if not scheduler:
-            continue
-
-        for chat_id in scheduler:
-            await run_scheduler_for_chat(
-                chat_id=chat_id,
-                apis=APIs(token=user.token, system=user.system),
-                user=user,
-                bot=bot,
-            )

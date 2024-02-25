@@ -16,8 +16,11 @@ from typing import Any, Union
 from aiogram import types
 from git import Repo
 
-from database import Database
+from database import Database, User
+from octodiary.apis import AsyncMobileAPI
 from octodiary.exceptions import APIError
+from octodiary.types import Type
+from octodiary.urls import Systems
 from utils.texts import Texts
 
 
@@ -269,3 +272,69 @@ def get_date():
 
 def get_datetime():
     return datetime.now(tz=TIMEZONE)
+
+
+class ODAuth(Type):
+    client_id: str
+    client_secret: str
+    access_token: str
+    refresh_token: str
+
+
+async def refresh_mes_token(user: User, *, is_expired: bool = False):
+    _api = AsyncMobileAPI(system=Systems.MES)
+    if is_expired:
+        auth_settings: ODAuth = ODAuth(**user.db_od_auth)
+        token = await _api.refresh_token(
+            token=auth_settings.refresh_token,
+            client_id=auth_settings.client_id,
+            client_secret=auth_settings.client_secret
+        )
+        user.token = token
+        new_auth = ODAuth(
+            access_token=token,
+            refresh_token=_api.token_for_refresh,
+            client_id=auth_settings.client_id,
+            client_secret=auth_settings.client_secret
+        )
+        await _api.edit_user_settings_app(
+            settings=new_auth,
+            profile_id=user.db_profile_id,
+            name="od_auth"
+        )
+    else:
+        api = AsyncMobileAPI(system=Systems.MES, token=user.token)
+        try:
+            auth_settings = await api.get_user_settings_app(
+                profile_id=user.db_profile_id,
+                name="od_auth",
+                settings_model=ODAuth
+            )
+        except APIError as e:
+            if e.status_code == 401:
+                return await refresh_mes_token(user, is_expired=True)
+            else:
+                raise e
+
+        if auth_settings.access_token != user.token:
+            user.token = auth_settings.access_token
+        else:
+            _api = AsyncMobileAPI(system=Systems.MES)
+            token = await _api.refresh_token(
+                token=auth_settings.refresh_token,
+                client_id=auth_settings.client_id,
+                client_secret=auth_settings.client_secret
+            )
+            user.token = token
+            new_auth = ODAuth(
+                access_token=token,
+                refresh_token=_api.token_for_refresh,
+                client_id=auth_settings.client_id,
+                client_secret=auth_settings.client_secret
+            )
+            await _api.edit_user_settings_app(
+                settings=new_auth,
+                name="od_auth",
+                profile_id=user.db_profile_id
+            )
+            user.db_od_auth = new_auth.model_dump(mode="json")

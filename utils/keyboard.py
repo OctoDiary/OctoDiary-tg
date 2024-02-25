@@ -26,6 +26,9 @@ DEFAULT = ReplyKeyboardMarkup(keyboard=[
         KeyboardButton(text=Texts.Buttons.MARKS_BY_SUBJECT)
     ],
     [
+        KeyboardButton(text=Texts.Buttons.CALCULATOR)
+    ],
+    [
         KeyboardButton(text=Texts.Buttons.SETTINGS),
         KeyboardButton(text=Texts.Buttons.PROJECT_ABOUT)
     ]
@@ -44,6 +47,9 @@ DEFAULT_MES = ReplyKeyboardMarkup(keyboard=[
     [
         KeyboardButton(text=Texts.Buttons.MARKS_BY_DATE),
         KeyboardButton(text=Texts.Buttons.MARKS_BY_SUBJECT)
+    ],
+    [
+        KeyboardButton(text=Texts.Buttons.CALCULATOR)
     ],
     [
         KeyboardButton(text=Texts.Buttons.VISITS),

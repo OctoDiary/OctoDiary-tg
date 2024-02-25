@@ -190,6 +190,15 @@ async def set_login_type(message: Message, state: FSMContext):
                 reply_markup=CANCEL
             )
         case Texts.AUPD_TOKEN:
+            if (await state.get_data()).get("system") == Texts.Systems.MES:
+                await state.clear()
+                await message.answer(
+                    Texts.Authorization.NOT_SUPPORTED,
+                    reply_markup=CANCEL
+                )
+                return
+
+            await state.update_data(login_type=Texts.LoginTypes.AUPD_TOKEN)
             await state.set_state(Authorization.token)
             await message.answer(
                 Texts.Authorization.ENTER_TOKEN(system="МЭШ" if (await state.get_data()).get("system") == Texts.Systems.MES else "Моей Школы"),

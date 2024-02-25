@@ -305,7 +305,7 @@ async def refresh_tokens(**kwargs):
         if abs(exp - now).total_seconds() <= 14400:
             if user.system == Texts.Systems.MY_SCHOOL:
                 with (suppress(Exception)):
-                    user.token = APIs(
+                    user.token = await APIs(
                         token=user.token,
                         system=user.system
                     ).mobile.refresh_token()

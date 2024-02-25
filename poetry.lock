@@ -657,15 +657,19 @@ version = "0.3.0"
 description = "Python библиотека для использования API: МЭШ / Моя Школа."
 optional = false
 python-versions = ">=3.9"
-files = [
-    {file = "octodiary-0.3.0-py3-none-any.whl", hash = "sha256:0fa78f8e1a578744441fead0c9dc34bc668363f477cc53c4a2da2f69f1de9558"},
-    {file = "octodiary-0.3.0.tar.gz", hash = "sha256:f687225c29ef5e2ddd9bd7dd1f5ffc1eb1c86566c65beb542572f16e97541c1d"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 aiohttp = "*"
 fake-useragent = "*"
 pydantic = "*"
+
+[package.source]
+type = "git"
+url = "https://github.com/OctoDiary/OctoDiary-py.git"
+reference = "HEAD"
+resolved_reference = "68b9ebd3623975e64f8ebf57b1888132b4de8559"
 
 [[package]]
 name = "pycparser"
@@ -1019,4 +1023,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "a173744c83fd3b7dccdeeb2c6866943e0b936caf2881acb74e9405ad4178d7ea"
+content-hash = "27fce348e15c4d1aaa1dca2500e5e36fe8e09a24a601cb995c6fea83843ade99"

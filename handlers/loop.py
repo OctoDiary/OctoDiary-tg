@@ -17,15 +17,25 @@ from apis import APIs
 from database import Database
 from handlers.scheduler import run_scheduler_for_chat
 from loop import loop
+from octodiary.apis import AsyncMobileAPI
 from octodiary.exceptions import APIError
+from octodiary.types import Type
 from octodiary.types.mobile import EventsResponse
 from octodiary.types.mobile.marks import Payload
+from octodiary.urls import Systems
 from utils.filters import user_apis
 from utils.other import TIMEZONE, get_date, get_datetime, mark, pluralization_string
 from utils.texts import Texts
 
 db = Database()
 LoopRouter = Router()
+
+
+class ODAuth(Type):
+    client_id: str
+    client_secret: str
+    access_token: str
+    refresh_token: str
 
 
 async def save_user_data(user_id, bot: Bot):
@@ -278,18 +288,36 @@ async def refresh_tokens(**kwargs):
             jwt.decode(user.token, options={"verify_signature": False})["exp"], tz=TIMEZONE
         )
         now = datetime.datetime.now(tz=TIMEZONE)
-        if abs(exp - now).total_seconds() <= 3600:
-            with (suppress(Exception)):
-                user.token = APIs(
-                    token=user.token,
-                    system=user.system
-                ).mobile.refresh_token(
-                    **(
-                        user.refresh_data
-                        if user.system == Texts.Systems.MES
-                        else {}
-                    )
+        if abs(exp - now).total_seconds() <= 14400:
+            if user.system == Texts.Systems.MY_SCHOOL:
+                with (suppress(Exception)):
+                    user.token = APIs(
+                        token=user.token,
+                        system=user.system
+                    ).mobile.refresh_token()
+            else:
+                apis = APIs(token=user.token, system=user.system)
+                auth_settings = await apis.mobile.get_user_settings_app(
+                    profile_id=user.db_profile_id,
+                    name="od_auth",
+                    settings_model=ODAuth
                 )
+                if auth_settings.access_token != user.token:
+                    user.token = auth_settings.access_token
+                else:
+                    _api = AsyncMobileAPI(system=Systems.MES)
+                    token = await _api.refresh_token(
+                        token=auth_settings.refresh_token,
+                        client_id=auth_settings.client_id,
+                        client_secret=auth_settings.client_secret
+                    )
+                    user.token = token
+                    await apis.mobile.edit_user_settings_app(ODAuth(
+                        access_token=token,
+                        refresh_token=_api.token_for_refresh,
+                        client_id=auth_settings.client_id,
+                        client_secret=auth_settings.client_secret
+                    ), name="od_auth", profile_id=user.db_profile_id)
 
 
 @LoopRouter.startup()

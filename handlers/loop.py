@@ -10,6 +10,7 @@ from datetime import timedelta
 
 import jwt
 from aiogram import Bot, Router, exceptions
+from aiogram.exceptions import TelegramForbiddenError
 
 import api
 from apis import APIs
@@ -260,7 +261,8 @@ async def send_notifications(bot: Bot, **kwargs):
         for user_id in db.keys()
         if user_id.isdigit() and db.user(user_id).system and db.user(user_id).token
     ]:
-        await func
+        with suppress(TelegramForbiddenError):
+            await func
 
 
 @LoopRouter.startup()

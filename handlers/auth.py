@@ -21,7 +21,7 @@ from aiogram.types import (
 )
 
 from database import Database
-from handlers.loop import save_user_data
+from handlers.loop import save_user_data, ODAuth
 from octodiary.apis import AsyncMobileAPI
 from octodiary.exceptions import APIError
 from octodiary.types.captcha import Captcha
@@ -542,12 +542,15 @@ async def confirm(message: Message, state: FSMContext):
             user.db_profile_id = data["profile_id"]
             user.db_token = data["token"]
             user.db_system = data["system"]
+
             if data["system"] == Texts.Systems.MES:
-                user.refresh_data = {
-                    "client_id": data["api"].client_id,
-                    "client_secret": data["api"].client_secret,
-                    "token": data["api"].token_for_refresh
-                }
+                await data["api"].edit_user_settings_app(ODAuth(
+                    access_token=data["token"],
+                    refresh_token=data["api"].token_for_refresh,
+                    client_id=data["api"].client_id,
+                    client_secret=data["api"].client_secret
+                ), name="od_auth", profile_id=data["profile_id"])
+
             user.db_settings = {
                 "goals": False,
                 "notifications": {

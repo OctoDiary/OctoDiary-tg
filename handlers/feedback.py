@@ -20,7 +20,7 @@ from utils.texts import Texts
 feedback = Router()
 
 
-class States(StatesGroup):
+class FEEDBACK(StatesGroup):
     platform = State()
     system = State()
     reason = State()
@@ -42,10 +42,10 @@ async def feedback_cmd(message: Message, state: FSMContext):
         )
 
     )
-    await state.set_state(States.platform)
+    await state.set_state(FEEDBACK.platform)
 
 
-@feedback.message(States.platform)
+@feedback.message(FEEDBACK.platform)
 async def platform(message: Message, state: FSMContext):
     await state.update_data(platform=message.text)
     await message.answer(
@@ -60,10 +60,10 @@ async def platform(message: Message, state: FSMContext):
         )
 
     )
-    await state.set_state(States.system)
+    await state.set_state(FEEDBACK.system)
 
 
-@feedback.message(States.system)
+@feedback.message(FEEDBACK.system)
 async def system(message: Message, state: FSMContext):
     await state.update_data(system=message.text)
     await message.answer(
@@ -77,10 +77,10 @@ async def system(message: Message, state: FSMContext):
             ], is_persistent=True, resize_keyboard=True
         )
     )
-    await state.set_state(States.reason)
+    await state.set_state(FEEDBACK.reason)
 
 
-@feedback.message(States.reason)
+@feedback.message(FEEDBACK.reason)
 async def reason(message: Message, state: FSMContext):
     await state.update_data(
         reason=message.text,
@@ -97,10 +97,10 @@ async def reason(message: Message, state: FSMContext):
             ], is_persistent=True, resize_keyboard=True
         )
     )
-    await state.set_state(States.messages)
+    await state.set_state(FEEDBACK.messages)
 
 
-@feedback.message(States.messages)
+@feedback.message(FEEDBACK.messages)
 async def messages(message: Message, state: FSMContext):
     if message.text != "Готово":
         await state.update_data(messages=[*(await state.get_data())["messages"], message])
@@ -124,10 +124,10 @@ async def messages(message: Message, state: FSMContext):
                 ], is_persistent=True, resize_keyboard=True
             )
         )
-        await state.set_state(States.confirm)
+        await state.set_state(FEEDBACK.confirm)
 
 
-@feedback.message(States.confirm)
+@feedback.message(FEEDBACK.confirm)
 async def confirm(message: Message, state: FSMContext, bot: Bot):
     if message.text == Texts.YES:
         data = await state.get_data()

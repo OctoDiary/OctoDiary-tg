@@ -2,7 +2,9 @@
 #          Licensed under the MIT License
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
+
 import os
+from logging import getLogger
 from typing import Optional
 
 import segno
@@ -15,8 +17,10 @@ from apis import APIs
 from database import User
 from handlers.router import router
 from utils.filters import apis_and_user
-from utils.other import handler
+from utils.other import handler, refresh_mes_token
 from utils.texts import Texts
+
+logger = getLogger(__name__)
 
 TEXT = Texts.SETTINGS
 NOTIFICATIONS = Texts.SETTINGS_NOTIFICATIONS
@@ -41,6 +45,13 @@ def markup(user: User, apis: APIs, section: Optional[str] = None):
                 {
                     "text": Texts.Buttons.APP_AUTHORIZATION,
                     "callback": send_app_auth,
+                    "kwargs": {"user": user}
+                }
+            ],
+            [
+                {
+                    "text": Texts.Buttons.REFRESH_TOKEN,
+                    "callback": refresh_token,
                     "kwargs": {"user": user}
                 }
             ]
@@ -172,7 +183,7 @@ async def send_app_auth(update: CallbackQuery, user: User):
             [
                 {
                     "text": Texts.SETTINGS_APP_AUTH_DIRECTLY,
-                    "url": "https://octodiary.dsop.online/redir?token=%s&system=1" % user.token
+                    "url": f"https://octodiary.dsop.online/redir?token=%s&system={0 if user.system == Texts.Systems.MES else 1}" % user.token
                 }
             ]
         ])
@@ -208,3 +219,24 @@ async def choose_child_profile(update: CallbackQuery, apis: APIs, user: User, ch
         response=Texts.CHOOSE_CHILD_PROFILE,
         reply_markup=markup(user, apis, "choose_child_profile")
     )
+    await update.answer()
+
+
+@handler()
+async def refresh_token(update: CallbackQuery, user: User):
+    if str(update.from_user.id) != user.id:
+        return
+
+    try:
+        if user.system == Texts.Systems.MY_SCHOOL:
+            user.token = APIs(
+                token=user.token,
+                system=user.system
+            ).mobile.refresh_token()
+        else:
+            await refresh_mes_token(user=user)
+
+        await update.answer(Texts.TOKEN_REFRESHED, show_alert=True, cache_time=0)
+    except Exception:
+        logger.exception("Failed to refresh token for user %s with system %s", str(user.id), user.system)
+        await update.answer(Texts.TOKEN_REFRESH_ERROR, show_alert=True, cache_time=0)

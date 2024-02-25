@@ -554,13 +554,21 @@ async def confirm(message: Message, state: FSMContext):
             user.db_system = data["system"]
 
             if data["system"] == Texts.Systems.MES:
-                od_auth_settings = ODAuth(
-                    access_token=data["token"],
-                    refresh_token=data["auth_api"].token_for_refresh,
-                    client_id=data["auth_api"].client_id,
-                    client_secret=data["auth_api"].client_secret
-                )
-                await data["api"].edit_user_settings_app(od_auth_settings, name="od_auth", profile_id=data["profile_id"])
+                if "auth_api" in data:
+                    od_auth_settings = ODAuth(
+                        access_token=data["token"],
+                        refresh_token=data["auth_api"].token_for_refresh,
+                        client_id=data["auth_api"].client_id,
+                        client_secret=data["auth_api"].client_secret
+                    )
+                    await data["api"].edit_user_settings_app(od_auth_settings, name="od_auth", profile_id=data["profile_id"])
+                else:
+                    od_auth_settings = await data["api"].get_user_settings_app(
+                        name="od_auth",
+                        profile_id=data["profile_id"],
+                        settings_model=ODAuth
+                    )
+
                 user.db_od_auth = od_auth_settings.model_dump(mode="json")
 
             user.db_settings = {

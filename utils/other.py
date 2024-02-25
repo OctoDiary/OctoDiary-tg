@@ -5,7 +5,6 @@
 
 import contextlib
 import inspect
-import logging
 import os
 import re
 import signal
@@ -15,6 +14,7 @@ from typing import Any, Union
 
 from aiogram import types
 from git import Repo
+from loguru import logger
 
 from database import Database, User
 from octodiary.apis import AsyncMobileAPI
@@ -144,8 +144,8 @@ def handler(*, fsm: bool = False):
                     )
                 )
             except (Exception, BaseException) as e:
+                logger.exception(e)
                 await update.bot.send_message(update.from_user.id, Texts.INTERNAL_ERROR)
-                logging.exception(e)
         return wrapper
     return decorator
 

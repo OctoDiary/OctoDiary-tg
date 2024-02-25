@@ -4,25 +4,21 @@
 #           https://github.com/OctoDiary
 
 import asyncio
-import logging
 import os
 import sys
-from logging import getLogger
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-
-# Load .env file, import inline manager and routers
 from dotenv import load_dotenv
+from loguru import logger
 
 from handlers import routers
 from inline.manager import BotInlineManager
+from utils.logs import init_loguru
 from utils.texts import Texts
 
 load_dotenv()
-
-logger = getLogger(__name__)
 
 
 async def amain():
@@ -38,13 +34,14 @@ async def amain():
 
 def main():
     try:
-        logging.basicConfig(level=logging.INFO)
+        logger.info("Bot started!")
         asyncio.run(amain())
     except KeyboardInterrupt:
         logger.info("Bot stopped! Exit...")
 
 
 if __name__ == "__main__":
+    init_loguru()
     if not os.getenv("TOKEN"):
         logger.warning(Texts.SET_TOKEN_IN_ENV)
         sys.exit()

@@ -2,25 +2,28 @@
 #          Licensed under the MIT License
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
-
-
+import re
 from datetime import timedelta
+from typing import Optional
 
 from aiogram import F
 from aiogram.enums import ChatType
 from aiogram.filters import Command
-from aiogram.types import CallbackQuery, Message
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.types import CallbackQuery, KeyboardButton, Message, ReplyKeyboardMarkup, ReplyKeyboardRemove
+from pydantic import BaseModel
 
 import api
 from apis import APIs
-from database import User
+from database import Database, User
 from handlers.router import router
 from inline.types import AdditionalButtons
 from octodiary.types.mobile import SubjectsMarks
 from octodiary.types.mobile.marks import Marks
 from octodiary.types.mobile.marks import Payload as MarkPayloadItem
 from octodiary.types.mobile.subject_marks import Payload
-from utils.filters import apis_and_user
+from utils.filters import apis_and_user, is_authorized, user_apis
 from utils.other import get_date, handler, pluralization_string, sort_dict_by_date
 from utils.other import mark as MARK
 from utils.texts import Texts
@@ -207,3 +210,149 @@ async def marks_by_subject(
 
     if isinstance(update, CallbackQuery):
         await update.answer(Texts.UPDATED)
+
+
+class Mark(BaseModel):
+    value: int
+    weight: int
+
+
+class CalculatorWeightedAverageMarks:
+    def __init__(self, marks: Optional[list[Mark]] = None):
+        self.marks = marks or []
+
+    def add_mark(self, value: int, weight: int):
+        self.marks.append(Mark(value=value, weight=weight))
+
+        return self.calculate()
+
+    def calculate(self):
+        return sum([mark.value * mark.weight for mark in self.marks]) / sum([mark.weight for mark in self.marks]) if self.marks else 0
+
+
+class Calculator(StatesGroup):
+    SUBJECT = State()
+    PERIOD = State()
+    MARK = State()
+
+
+@router.message(Command("calc", "calculate", "calculator"))
+@router.message(F.text == Texts.Buttons.CALCULATOR, F.chat.type == ChatType.PRIVATE)
+@handler()
+async def calculator(
+    message: Message,
+    state: FSMContext
+):
+    """Calculator for marks :: main"""
+
+    if not is_authorized(message.from_user):
+        await state.set_state(Calculator.MARK)
+        await state.update_data(subject=None, period=None, average=CalculatorWeightedAverageMarks())
+        await message.answer(Texts.Calculator.ENTER_MARKS)
+        return
+
+    user = Database().user(message.from_user.id)
+    apis = user_apis(user)
+
+    marks_info = await api.get_subjects_marks(user=user, apis=apis)
+
+    data = {
+        i.subject_name: {
+            p.title: [Mark(value=int(m.value), weight=m.weight) for m in p.marks]
+            for p in i.periods
+        }
+        for i in marks_info.response.payload
+    }
+    await state.update_data(data=data)
+
+    await message.answer(Texts.Calculator.CHOOSE_SUBJECT, reply_markup=ReplyKeyboardMarkup(
+        keyboard=[*message.bot.inline.chunks([KeyboardButton(text=subject) for subject in data], 2), [KeyboardButton(text=Texts.Buttons.WITH_NULL)]],
+        resize_keyboard=True
+    ))
+    await state.set_state(Calculator.SUBJECT)
+
+
+@router.message(Calculator.SUBJECT)
+@handler()
+async def calculator_subject(
+    message: Message,
+    state: FSMContext
+):
+    """Calculator for marks :: subject"""
+    state_data = await state.get_data()
+    if message.text == Texts.Buttons.WITH_NULL:
+        await state.set_state(Calculator.MARK)
+        await state.update_data(subject=None, period=None, average=CalculatorWeightedAverageMarks())
+        await message.answer(Texts.Calculator.ENTER_MARKS, reply_markup=ReplyKeyboardRemove())
+        return
+
+    if message.text not in state_data and message.text != Texts.Buttons.WITH_NULL:
+        return
+
+    await state.update_data(subject=message.text)
+
+    await message.answer(Texts.Calculator.CHOOSE_PERIOD, reply_markup=ReplyKeyboardMarkup(
+        keyboard=message.bot.inline.chunks([KeyboardButton(text=period) for period in state_data[message.text]], 2),
+        resize_keyboard=True
+    ))
+    await state.set_state(Calculator.PERIOD)
+
+
+@router.message(Calculator.PERIOD)
+@handler()
+async def calculator_period(
+    message: Message,
+    state: FSMContext
+):
+    """Calculator for marks :: period"""
+    state_data = await state.get_data()
+    if message.text not in state_data[state_data["subject"]]:
+        return
+
+    marks = state_data[state_data["subject"]][message.text]
+
+    await state.update_data(
+        period=message.text,
+        marks=marks,
+        average=CalculatorWeightedAverageMarks(marks)
+    )
+
+    await message.answer(Texts.Calculator.ENTER_MARKS, reply_markup=ReplyKeyboardRemove())
+    await message.answer(
+        Texts.Calculator.AVERAGE.format(
+            AVERAGE=(await state.get_data())["average"].calculate(),
+            ALL=" ".join([
+                MARK(mark.value, mark.weight)
+                for mark in (await state.get_data())["average"].marks
+            ])
+        )
+    )
+    await state.set_state(Calculator.MARK)
+
+
+@router.message(Calculator.MARK)
+@handler()
+async def calculator_mark(
+    message: Message,
+    state: FSMContext
+):
+    """Calculator for marks :: mark"""
+    state_data = await state.get_data()
+    if message.text == "-last":
+        state_data["average"].marks.remove(state_data["average"].marks[-1])
+        new_average = state_data["average"].calculate()
+    else:
+        if not (match := re.match(r"(\d+) (\d+)", message.text)) or int(match.group(2)) > 9 or int(match.group(2)) < 1 or int(match.group(1)) < 1:
+            return await message.answer(Texts.Calculator.INVALID_MARK)
+
+        new_average = state_data["average"].add_mark(int(match.group(1)), int(match.group(2)))
+
+    await message.answer(
+        Texts.Calculator.AVERAGE.format(
+            AVERAGE=new_average,
+            ALL=" ".join([
+                MARK(mark.value, mark.weight)
+                for mark in state_data["average"].marks
+            ])
+        )
+    )

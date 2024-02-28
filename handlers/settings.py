@@ -229,7 +229,7 @@ async def refresh_token(update: CallbackQuery, user: User):
 
     try:
         if user.system == Texts.Systems.MY_SCHOOL:
-            user.token = APIs(
+            user.token = await APIs(
                 token=user.token,
                 system=user.system
             ).mobile.refresh_token()

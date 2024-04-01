@@ -66,7 +66,9 @@ async def cancel(message: Message, state: FSMContext):
     await state.clear()
     await message.answer(
         text=getattr(Texts, state_name.split(":")[0]).CANCEL,
-        reply_markup=ReplyKeyboardRemove()
+        reply_markup=ReplyKeyboardRemove() if state_name == "Authorization:confirm" else (
+            DEFAULT if Database().user(str(message.from_user.id)).system == Texts.Systems.MY_SCHOOL else DEFAULT_MES
+        )
     )
 
 

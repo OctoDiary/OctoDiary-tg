@@ -353,5 +353,13 @@
         "INVALID_MARK": "\uD83D\uDEAB <b>Неверный</b> <b>формат</b> оценки!\n\nНеобходимый формат: <i>\"{оценка} {вес}\"</i>, например:\n<blockquote>5 1</blockquote>\n - оценка \"5\" весом 1 балл\n/cancel - закрыть калькулятор",
         "AVERAGE": "\uD83D\uDD22 <b>Калькулятор среднего балла</b>\n\n<b>Средний балл</b>: <code>{AVERAGE:.2f}</code>\n<b>Все оценки</b>: <code>{ALL}</code>\n/cancel - закрыть калькулятор",
         "CANCEL": "\uD83D\uDD22 <b>Калькулятор закрыт</b>\n\nЧтобы открыть калькулятор еще раз - /calculator"
+    },
+    "WebAuth": {
+        "CANCEL": "\uD83D\uDD22 <b>Вход отменен</b>",
+        "OK": "\uD83D\uDD22 <b>Вход выполнен!</b>",
+        "ERROR": "\uD83D\uDEAB <b>Вход провален</b>\n\nПопробуйте ещё раз - /webauth",
+        "SEND_CODE": "\uD83D\uDD22 Введите <b>код</b> с <a href=\"https://octodiary.dsop.online/web_auth/\"><b>сайта</b></a>",
+        "CONFIRM": "\uD83D\uDD10 <b>Вы подтверждаете вход</b> на данном устройстве <b>с кодом {CODE}</b>?",
+        "SUCCESS": "✅ <b>Вход выполнен!</b>"
     }
 }

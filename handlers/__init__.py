@@ -3,7 +3,7 @@
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
 
-from handlers import homeworks, inline_query, marks, profile, schedule, scheduler, settings, visits
+from handlers import homeworks, inline_query, marks, profile, schedule, scheduler, settings, visits, web_auth
 from handlers.admins import AdminRouter
 from handlers.auth import auth_router as AuthRouter
 from handlers.feedback import feedback as FeedbackRouter

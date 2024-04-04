@@ -9,9 +9,12 @@ from aiogram.filters import Command, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import (
+    KeyboardButton,
     Message,
+    ReplyKeyboardMarkup,
 )
 
+import api
 from apis import APIs
 from database import Database, User
 from handlers.auth import auth_router
@@ -35,9 +38,6 @@ class WebAuth(StatesGroup):
 @handler()
 @apis_and_user
 async def webauth(message: Message, state: FSMContext, command: CommandObject, apis: APIs, user: User):
-    if user.system == Texts.Systems.MES:
-        return
-
     if command.args and command.args.isdigit():
         await state.update_data(code=command.args)
         await state.set_state(WebAuth.confirm)
@@ -51,6 +51,9 @@ async def webauth(message: Message, state: FSMContext, command: CommandObject, a
 @handler()
 async def webauth_code(message: Message, state: FSMContext):
     await state.update_data(code=message.text)
+    user = Database().user(str(message.from_user.id))
+
+    await state.update_data(user=user)
     await state.set_state(WebAuth.confirm)
     await message.reply(Texts.WebAuth.CONFIRM(CODE=message.text), reply_markup=YES_OR_NO)
 
@@ -66,21 +69,27 @@ async def webauth_confirm(message: Message, state: FSMContext):
         await state.clear()
         return
 
-    user = Database().user(str(message.from_user.id))
+    await send_token(message, data["user"], code)
+    await state.clear()
+
+
+async def send_token(message: Message, user: User, code: str):
     reply_markup = (
         DEFAULT if user.system == Texts.Systems.MY_SCHOOL else DEFAULT_MES
     )
-
     result = requests.post(
         f"https://octodiary.dsop.online/accept_web_auth/{code}",
         json={
             "token": user.token,
             "system": user.system
         },
-        timeout=15
+        timeout=30
     )
-    await state.clear()
-    if result.json()["status"] == "Success":
-        await message.reply(Texts.WebAuth.SUCCESS, reply_markup=reply_markup)
-    else:
-        await message.reply(Texts.WebAuth.ERROR, reply_markup=reply_markup)
+    await message.reply(
+        (
+            Texts.WebAuth.SUCCESS
+            if result.json()["status"] == "Success"
+            else Texts.WebAuth.ERROR
+        ),
+        reply_markup=reply_markup
+    )

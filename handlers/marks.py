@@ -105,17 +105,44 @@ def marks_subject_item(item: Payload, *, allow_goals: bool = False):
     return text
 
 
-def marks_sorted_by_subject_info(marks_short: api.APIResponse[SubjectsMarks], goals: bool = False) -> dict[str, str]:
-    return {
-        (
-            item
-            .subject_name
-            .replace(Texts.OBZ, Texts.OBZ_SHORT)
-            .replace(Texts.PHIZ_KULTURA, Texts.PHIZ_KULTURA_SHORT)
-        ): info
-        for item in marks_short.response.payload
-        if (info := marks_subject_item(item=item, allow_goals=goals))
+def marks_sorted_by_subject_info(marks: api.APIResponse[SubjectsMarks], goals: bool = False) -> dict[str, str]:
+    result = {
+        Texts.SUBJECT_MARKS_ABOUT.BUTTON: Texts.SUBJECT_MARKS_ABOUT.TEXT(
+            SUBJECTS="\n".join(
+                list(dict(sorted(
+                    {
+                        period.value: Texts.SUBJECT_MARKS_ABOUT.SUBJECT(
+                            NAME=(
+                                item.subject_name
+                                .replace(Texts.OBZ, Texts.OBZ_SHORT)
+                                .replace(Texts.PHIZ_KULTURA, Texts.PHIZ_KULTURA_SHORT)
+                            ),
+                            AVERAGE=period.value,
+                            MARKS_COUNT=pluralization_string(period.count, ["оценка", "оценки", "оценок"]),
+                        )
+                        for item in marks.response.payload
+                        for period in item.periods
+                        if not period.fixed_value and period.value
+                    }.items(),
+                    key=lambda x: float(x[0]),
+                    reverse=True
+                )).values())
+            )
+        )
     }
+    result.update(
+        {
+            (
+                item
+                .subject_name
+                .replace(Texts.OBZ, Texts.OBZ_SHORT)
+                .replace(Texts.PHIZ_KULTURA, Texts.PHIZ_KULTURA_SHORT)
+            ): info
+            for item in marks.response.payload
+            if (info := marks_subject_item(item=item, allow_goals=goals))
+        }
+    )
+    return result
 
 
 @router.message(Command("marks_by_date"))

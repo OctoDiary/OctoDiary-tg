@@ -153,6 +153,11 @@
     "OR": "</code> или <code>",
     "SUBJECT_MARKS_INFO": "<b>Предмет</b>: <code>{SUBJECT_NAME}</code>\n\n<b>Общий средний балл</b>: <code>{AVERAGE_BY_ALL}</code>\n<b>Периоды:</b>",
     "SUBJECT_MARKS_PERIOD_INFO": "<blockquote>┌ <b>{TITLE}</b> [ {START} - {END} ]\n├ <b>Средний балл</b>: <code>{AVERAGE}</code> {DYNAMIC}\n{GOALS}├ <b>Итоговая оценка</b>: <code>{FIXED_VALUE}</code>\n├ <b>Количество оценок</b>: <code>{COUNT}</code>\n└ <b>Оценки</b>: {MARKS}\n</blockquote>",
+    "SUBJECT_MARKS_ABOUT": {
+        "BUTTON": "Главная",
+        "TEXT": "\uD83D\uDD22 <b>Оценки по предмету</b>\n\n<b>Средние баллы предметов в текущем периоде:</b>\n<blockquote>{SUBJECTS}</blockquote>",
+        "SUBJECT": "<b>[{AVERAGE}] {NAME}</b> - {MARKS_COUNT}"
+    },
     "OBZ": "Основы безопасности жизнедеятельности",
     "OBZ_SHORT": "ОБЖ",
     "PHIZ_KULTURA": "Физическая культура",

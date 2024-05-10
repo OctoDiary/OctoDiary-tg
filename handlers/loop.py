@@ -85,26 +85,26 @@ async def save_user_data(user_id, bot: Bot):
                     await api.get_subjects_marks(user=user, apis=apis)
                 ).response.model_dump(mode="json", exclude_none=True, exclude_unset=True)
             },
-            "rating": {
-                "class": [
-                    x.model_dump(mode="json", exclude_none=True, exclude_unset=True)
-                    for x in (
-                        await api.get_rating(user=user, apis=apis, type=api.RatingType.CLASS)
-                    ).response
-                ],
-                "subjects": [
-                    x.model_dump(mode="json", exclude_none=True, exclude_unset=True)
-                    for x in (
-                        await api.get_rating(user=user, apis=apis, type=api.RatingType.SUBJECTS)
-                    ).response
-                ],
-            },
-            "class_members": [
-                i.model_dump(mode="json", exclude_none=True, exclude_unset=True)
-                for i in (
-                    await api.get_class_members(user=user, apis=apis)
-                ).response
-            ],
+            # "rating": {
+            #     "class": [
+            #         x.model_dump(mode="json", exclude_none=True, exclude_unset=True)
+            #         for x in (
+            #             await api.get_rating(user=user, apis=apis, type=api.RatingType.CLASS)
+            #         ).response
+            #     ],
+            #     "subjects": [
+            #         x.model_dump(mode="json", exclude_none=True, exclude_unset=True)
+            #         for x in (
+            #             await api.get_rating(user=user, apis=apis, type=api.RatingType.SUBJECTS)
+            #         ).response
+            #     ],
+            # },
+            # "class_members": [
+            #     i.model_dump(mode="json", exclude_none=True, exclude_unset=True)
+            #     for i in (
+            #         await api.get_class_members(user=user, apis=apis)
+            #     ).response
+            # ],
             "time": get_datetime().strftime("%Y-%m-%d %H:%M:%S"),
         }
 

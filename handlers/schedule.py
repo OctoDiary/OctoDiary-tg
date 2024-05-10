@@ -19,8 +19,10 @@ from inline.types import AdditionalButtons
 from octodiary import types
 from octodiary.exceptions import APIError
 from octodiary.types.mobile import EventsResponse
+from octodiary.types.mobile.events import Item
+from utils.additional_models import MarkInfo
 from utils.filters import apis_and_user
-from utils.other import get_date, handler, pluralization_string, sort_dict_by_date
+from utils.other import TIMEZONE, get_date, handler, pluralization_string, sort_dict_by_date, start_with_args
 from utils.other import mark as MARK
 from utils.texts import Texts
 
@@ -155,6 +157,7 @@ def day_schedule_info(events: api.APIResponse[EventsResponse], *, inline: bool =
 
 def mark_info(mark: Mark) -> str:
     return Texts.MARK_INFO_SECOND(
+        MARK_INFO_URL=start_with_args("mark_" + str(mark.id)),
         VALUE=MARK(mark.value, mark.weight),
         CONTROL_FORM_NAME=mark.control_form_name,
         WEIGHT=pluralization_string(mark.weight, ["балл", "балла", "баллов"]),
@@ -208,6 +211,34 @@ def lesson_info(lesson: LessonScheduleItem) -> str:
                 "\n".join([homework_info(homework) for homework in lesson.lesson_homeworks])
             )
         ) if lesson.lesson_homeworks else ""
+    )
+
+
+def mark_info_text(mark: MarkInfo) -> str:
+    return Texts.MARK_INFO_FULL(
+        mark=mark,
+        WEIGHT=pluralization_string(mark.weight, ["балл", "балла", "баллов"]),
+        COMMENT=mark.comment or "❌",
+        CREATED_AT=mark.updated_at.strftime("%d.%m.%Y %H:%M"),
+        LESSON_INFO_URL=start_with_args(f"lesson_{mark.activity.schedule_item_id}_PLAN"),
+        IS_EXAM_EMOJI="❗️" if mark.is_exam else "",
+    ) + (
+        Texts.MARK_INFO_DETAILS.STATISTICS(
+            TOTAL_STUDENTS_COUNT=pluralization_string(
+                mark.class_results.total_students,
+                ["ученик", "ученика", "учеников"]
+            )
+        ) + "<blockquote>" + (
+            "\n".join([
+                (
+                    f"<b>{mark_stat.mark_value.five}</b> "
+                    f"{'▓'*round(mark_stat.percentage_of_students/10)}"
+                    f"{'▒'*(10-round(mark_stat.percentage_of_students/10))}"
+                    f" <b>({mark_stat.percentage_of_students}%, {mark_stat.number_of_students} уч.)</b>"
+                )
+                for mark_stat in mark.class_results.marks_distributions
+            ])
+        ) + "</blockquote>"
     )
 
 
@@ -302,6 +333,48 @@ async def get_lesson_info(
             "disable_deadline": True
         }
 
+    )
+
+    if isinstance(update, CallbackQuery):
+        await update.answer(Texts.UPDATED)
+
+
+@router.message(Command("mark"))
+@handler()
+@apis_and_user
+async def get_mark_info(
+        update: Message | CallbackQuery,
+        apis: APIs,
+        user: User,
+        command: CommandObject = None,
+        mark_id: Optional[str] = None,
+        *,
+        is_inline: bool = False
+):
+    """Get mark information"""
+
+    response = update if is_inline else await update.bot.inline.answer(update, Texts.LOADING)
+
+    try:
+        mark_data = await api.get_mark(user, apis, mark_id if mark_id else int(command.args.strip()))
+    except Exception:
+        return await update.answer(Texts.MARK_NOT_FOUND)
+
+    await update.bot.inline.answer(
+        response,
+        response=mark_info_text(mark_data.response),
+        reply_markup={
+            "text": Texts.Buttons.UPDATE,
+            "callback": get_mark_info,
+            "kwargs": {
+                "apis": apis,
+                "user": user,
+                "mark_id": mark_id,
+                "command": command
+            },
+            "reusable": True,
+            "disable_deadline": True
+        }
     )
 
     if isinstance(update, CallbackQuery):

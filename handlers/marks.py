@@ -100,7 +100,7 @@ def marks_subject_item(item: Payload, *, allow_goals: bool = False):
             COUNT=str(period.count or "❌"),
             MARKS=(
                 "; ".join([
-                    MARK(mark.value, mark.weight)
+                    f"<a href=\"{start_with_args('mark_' + str(mark.id))}\">{MARK(mark.value, mark.weight)}</a>"
                     for mark in period.marks
                 ]) if period.marks else "❌"
             )

@@ -13,7 +13,8 @@ from pydantic import BaseModel
 from apis import APIs
 from database import User
 from octodiary import types
-from utils import Texts
+from octodiary.urls import BaseURL, URLTypes
+from utils.additional_models import MarkInfo
 from utils.other import get_date
 
 ResponseType = typing.TypeVar("ResponseType")
@@ -255,3 +256,32 @@ async def get_class_members(user: User, apis: APIs) -> APIResponse[types.mobile.
             raise e
 
     return APIResponse(response=response, is_cache=is_cache, last_cache_time=user.cache.get("time", "недавно"))
+
+
+async def get_mark(
+        user: User,
+        apis: APIs,
+        mark_id: str,
+) -> APIResponse[MarkInfo]:
+    return APIResponse[MarkInfo](
+        response=(
+            await apis.mobile.request(
+                method="GET",
+                base_url=BaseURL(type=URLTypes.SCHOOL_API, system=user.system),
+                path=f"/family/mobile/v1/marks/{mark_id}",
+                params={
+                    "student_id": (
+                        user.db_current_child["id"]
+                        if user.db_current_child
+                        else user.db_profile["children"][0]["id"]
+                    ),
+                },
+                custom_headers={
+                    "x-mes-subsystem": "familymp",
+                    "client-type": "diary-mobile",
+                    "profile-id": user.db_profile_id,
+                },
+                model=MarkInfo
+            )
+        )
+    )

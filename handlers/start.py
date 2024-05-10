@@ -14,6 +14,7 @@ from aiogram.types import Message
 from database import Database
 from handlers.auth import app_auth
 from handlers.feedback import feedback_cmd
+from handlers.schedule import get_mark_info
 from utils.keyboard import ABOUT, DEFAULT, DEFAULT_MES
 from utils.other import get_hash
 from utils.texts import Texts
@@ -28,6 +29,8 @@ async def start(message: Message, state: FSMContext, command: CommandObject):
             await feedback_cmd(message, state)
         elif match := re.match(r"app_auth_(.*)", command.args):
             await app_auth(message, state, match)
+        elif match := re.match(r"mark_(.*)", command.args):
+            await get_mark_info(message, mark_id=match.group(1))
         return
 
     user = Database().user(message.from_user.id)

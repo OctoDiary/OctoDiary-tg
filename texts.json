@@ -8,7 +8,7 @@
         "THUMBNAIL": "https://img.icons8.com/stickers/100/backend-development.png",
         "DESCRIPTION": "🛠 Ведутся тех. работы..."
     },
-    "API_ERROR": "❗️ [ <code>{ERROR.status_code}</code> ] Сервер ответил <b>ошибкой</b>: <code>{ERROR.error_type}</code>\n\nПопробуйте повторить запрос <b>позже</b>.",
+    "API_ERROR": "❗️ [ <code>{ERROR.status_code}</code> ] Сервер ответил <b>ошибкой</b>: <code>{ERROR.error_types}</code>\n\nПопробуйте повторить запрос <b>позже</b>.",
     "APIErrorInline": {
         "ID": "server_error",
         "TITLE": "❗️[{ERROR.status_code}] Сервер выдал ошибку",

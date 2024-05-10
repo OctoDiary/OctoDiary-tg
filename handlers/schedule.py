@@ -2,8 +2,8 @@
 #          Licensed under the MIT License
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
-
-from datetime import datetime, timedelta
+import re
+from datetime import date, datetime, timedelta
 from typing import Optional
 
 from aiogram import F
@@ -17,7 +17,6 @@ from database import User
 from handlers.router import router
 from inline.types import AdditionalButtons
 from octodiary import types
-from octodiary.exceptions import APIError
 from octodiary.types.mobile import EventsResponse
 from octodiary.types.mobile.events import Item
 from utils.additional_models import MarkInfo
@@ -31,9 +30,24 @@ LessonHomework = types.mobile.lesson_schedule_item.LessonHomework
 Mark = types.mobile.lesson_schedule_item.Mark
 
 
-def day_schedule_info(events: api.APIResponse[EventsResponse], *, inline: bool = False, exclude_marks: bool = False):
-    days_lessons = {}
+class ScheduleInfo:
+    def __init__(
+            self,
+            events: api.APIResponse[EventsResponse],
+            user: User,
+            *,
+            inline: bool = False,
+            exclude_marks: bool = False
+    ):
+        self.events = events
+        self.inline = inline
+        self.exclude_marks = exclude_marks
+        self.user = user
 
+        self.days: dict[date, list[Item]] = {}
+        self.sort_by_date(events)
+
+    @staticmethod
     def weekday(x):
         return {
             0: "понедельник",
@@ -45,114 +59,144 @@ def day_schedule_info(events: api.APIResponse[EventsResponse], *, inline: bool =
             6: "воскресенье"
         }[int(x)]
 
-    available_other_source: dict[str, list[str]] = {}
+    def sort_by_date(self, events: api.APIResponse[EventsResponse]):
+        for event in events.response.response:
+            start = event.start_at
+            if isinstance(start, str):
+                start = datetime.strptime(start, "%Y-%m-%dT%H:%M:%S").replace(tzinfo=TIMEZONE)
 
-    for event in events.response.response:
-        is_event = False
+            date = start.date()
 
-        start = event.start_at
-        end = event.finish_at
+            if date not in self.days:
+                self.days[date] = []
 
-        date = start.date()
-        date_str = f"{date.day:02}.{date.month:02}/{date.weekday()}"
+            self.days[date].append(event)
 
-        if date_str not in days_lessons:
-            days_lessons[date_str] = []
-
-        lesson_info = f"[ <b>ID</b>: <code>{event.id}</code> ]"
-
-        if date_str not in available_other_source:
-            available_other_source[date_str] = []
-
-        match event.source:
-            case "ORGANIZER":
-                lesson_info = "[ <b>ЭКС*</b> ]"
-                available_other_source[date_str] += ["ORGANIZER"]
-            case "EC":
-                lesson_info = "[ <b>ВД*</b> ]"
-                available_other_source[date_str] += ["EC"]
-            case "AE":
-                lesson_info = "[ <b>ДО*</b> ]"
-                available_other_source[date_str] += ["AE"]
-            case "EVENTS":
-                lesson_info = "[ <b>ЛС*</b> ]"
-                available_other_source[date_str] += ["EVENTS"]
-                is_event = True
-
-        if not is_event:
-            homeworks = [
-                homework.replace("\n", "</code>; <code>")
-                for homework in event.homework.descriptions
-            ] if event.homework and event.homework.descriptions else []
-
-            days_lessons[date_str].append(
-                (
-                    f"• <b>{event.subject_name}</b> "
-                    f"[ <code>{start.hour:02}:{start.minute:02}-{end.hour:02}:{end.minute:02}</code> ] [ <code>{event.room_number}{'к.' if str(event.room_number).isdigit() else ''}</code> ] "
-                )
-                + lesson_info
-                + (
-                    f"\n  {'├' if event.cancelled or homeworks or event.marks else '└'} <b>Замена</b>: ✅" if event.replaced else "")
-                + (f"\n  {'├' if homeworks or event.marks else '└'} <b>Отмена</b>: ✅" if event.cancelled else "")
-                + (
-                    (
-                            f"\n  {'├' if homeworks else '└'} <b>Оценки</b>: " + " | ".join(
-                                [f"<code>{MARK(mark.value, mark.weight)}</code>" for mark in event.marks])
-                    ) if event.marks and not exclude_marks else ""
-                )
-                + (
-                    (
-                            (
-                                (
-                                        "\n  ├ <b>ДЗ</b>: <code>"
-                                        + "</code>\n  ├ <b>ДЗ</b>: <code>".join(homeworks[:-1])
-                                        + "</code>"
-                                ) if len(homeworks) > 1 else ""
-                            )
-                            + f"\n  └ <b>ДЗ</b>: <code>{homeworks[-1]}</code>"
-                    ) if homeworks else ""
-                )
+    def gen_day_info(self, dt: date) -> str:
+        settings: dict[str, bool] = self.user.db_settings.get("schedule_details", {})
+        text = (
+            (
+                Texts.FROM_CACHE(self.events.last_cache_time)
+                if self.events.is_cache
+                else ""
             )
-        else:
-            days_lessons[date_str].append(
-                (
-                    f"• <b>{event.title}</b> "
-                ) + (
+            + Texts.SCHEDULE_FOR_DAY(
+                WEEKDAY=self.weekday(dt.weekday()),
+                DAY=dt.strftime("%d.%m"),
+            )
+        )
+        hints = []
+        for event in self.days[dt]:
+            start = event.start_at
+            end = event.finish_at
+
+            lesson_type = f"[ <b>ID</b>: <code>{event.id}</code> ]" if settings.get("show_id", False) else ""
+            match event.source:
+                case "ORGANIZER":
+                    lesson_type = "[ <b>ЭКС*</b> ]"
+                    if "ORGANIZER" not in hints:
+                        hints.append("ORGANIZER")
+                case "EC":
+                    lesson_type = "[ <b>ВД*</b> ]"
+                    if "EC" not in hints:
+                        hints.append("EC")
+                case "AE":
+                    lesson_type = "[ <b>ДО*</b> ]"
+                    if "AE" not in hints:
+                        hints.append("AE")
+                case "EVENTS":
+                    lesson_type = "[ <b>ЛС*</b> ]"
+                    if "EVENTS" not in hints:
+                        hints.append("EVENTS")
+
+            if event.source != "EVENTS":
+                if not settings.get("show_other_lessons", True) and event.source != "PLAN":
+                    continue
+
+                homeworks = [
+                    homework.replace("\n", "</i>; <i>")
+                    for homework in event.homework.descriptions
+                ] if event.homework and event.homework.descriptions else []
+
+                event_text = (
+                    f"• <a href=\"{start_with_args('lesson_' + str(event.id) + '_' + event.source)}\"><b>{event.subject_name}</b></a> "
                     f"[ <code>{start.hour:02}:{start.minute:02}-{end.hour:02}:{end.minute:02}</code> ] "
-                    if not event.is_all_day else ""
-                ) + lesson_info + (
-                    f"\n  {'├' if event.conference_link or event.place else '└'} <b>Описание</b>: {event.description}" if event.description else ""
-                ) + (
-                    (
-                        f"\n  {'├' if event.place else '└'} <b>Конференция</b>: {event.conference_link}"
-                    ) if event.conference_link else ""
-                ) + (
-                    (
-                        f"\n  └ <b>Место</b>: {event.place}"
-                    ) if event.place else ""
+                    f"[ <code>{event.room_number}{'к.' if str(event.room_number).isdigit() else ''}</code> ] "
+                    f"{lesson_type}"
                 )
-            )
+                if settings.get("show_theme", True) and event.lesson_name:
+                    theme = event.lesson_name.replace('\n', ' ')
+                    event_text += f"\n  ✕ <b>Тема</b>: <i>{theme}</i>"
+                if settings.get("show_homeworks", True) and homeworks:
+                    event_text += (
+                        "\n  ✕ <b>ДЗ</b>: <i>"
+                        + "</i>\n  ✕ <b>ДЗ</b>: <i>".join(homeworks)
+                        + "</i>" + (
+                            f" <b>({event.homework.materials.count_execute} выполнить)</b>"
+                            if event.homework.materials and event.homework.materials.count_execute else ""
+                        ) + (
+                            f" <b>({event.homework.materials.count_learn} изучить)</b>"
+                            if event.homework.materials and event.homework.materials.count_learn else ""
+                        )
+                    )
+                if settings.get("show_marks", True) and event.marks and not self.exclude_marks:
+                    event_text += (
+                            "\n  ✕ <b>Оценки</b>: "
+                            + " | ".join([
+                                f'<a href="{start_with_args("mark_" + str(mark.id))}">{MARK(mark.value, mark.weight)}</a>'
+                                for mark in event.marks
+                            ])
+                    )
+                if settings.get("show_replaces", True) and event.replaced:
+                    event_text += "\n  ✕ <b>Замена</b>: ✅"
+                if event.cancelled:
+                    event_text += "\n  ✕ <b>Отмена</b>: ✅"
+            else:
+                if not settings.get("show_events", True):
+                    continue
 
-    return {
-        (Texts.FROM_CACHE(events.last_cache_time) if events.is_cache else "") + date_str.split("/")[0]: Texts.SCHEDULE_FOR_DAY(
-            WEEKDAY=date_str.split("/")[0],
-            DAY=weekday(date_str.split("/")[1]),
-        ) + "\n".join(lessons) + Texts.LESSON_INFO_DETAIL(
-            PREFIX="/" if not inline else "@OctoDiaryBot "
-        ) + (
-                                    Texts.LESSON_DESIGNATIONS + "".join([
-                                        getattr(Texts.DESIGNATIONS, event_type)
-                                        for event_type in event_types
-                                    ])
-                                    if (
-                                        event_types := list(set(
-                                            available_other_source.get(date_str, [])
-                                        ))
-                                    )
-                                    else ""
-                                )
-        for date_str, lessons in days_lessons.items()
-    }
+                event_text = (
+                        f"• <b>{event.title}</b> "
+                        + (
+                            f"[ <code>{start.hour:02}:{start.minute:02}-{end.hour:02}:{end.minute:02}</code> ] "
+                            if not event.is_all_day else ""
+                        )
+                        + lesson_type
+                )
+                if event.description:
+                    event_text += f"\n  ✕ <b>Описание</b>: <i>{event.description}</i>"
+                if event.conference_link:
+                    event_text += f"\n  ✕ <b>Конференция</b>: <i>{event.conference_link}</i>"
+                if event.place:
+                    event_text += f"\n  ✕ <b>Место</b>: <i>{event.place}</i>"
+
+            count = len(re.findall(r"✕", event_text))
+            if count > 1:
+                event_text = re.sub(r"✕", r"├", event_text, count=count - 1)
+            event_text = re.sub(r"✕", r"└", event_text)
+
+            text += event_text + "\n"
+
+        text += (
+            Texts.LESSON_INFO_DETAIL(
+                PREFIX="/" if not self.inline else "@OctoDiaryBot "
+            )
+            + (
+                Texts.LESSON_DESIGNATIONS + "".join([
+                    getattr(Texts.DESIGNATIONS, event_type)
+                    for event_type in hints
+                ])
+                if hints
+                else ""
+            )
+        )
+        return text
+
+    def inline_strings(self):
+        return {
+            dt.strftime("%d.%m"): self.gen_day_info(dt)
+            for dt in self.days
+        }
 
 
 def mark_info(mark: Mark) -> str:
@@ -169,7 +213,7 @@ def mark_info(mark: Mark) -> str:
 
 def homework_info(homework: LessonHomework) -> str:
     files = [
-        f"<a href='{file.link}'>{file.title}</a>"
+        f"{file.title} (<a href='{file.link}'>ОТКРЫТЬ</a>)"
         for material in homework.materials
         for file in material.items
     ] if homework.materials else []
@@ -255,10 +299,7 @@ async def schedule(
 ):
     """Get schedule information"""
 
-    if not is_inline:
-        response = await update.bot.inline.answer(update, Texts.LOADING)
-    else:
-        response = update
+    response = update if is_inline else await update.bot.inline.answer(update, Texts.LOADING)
 
     today = get_date()
     events = await api.get_events(
@@ -268,7 +309,7 @@ async def schedule(
         end_date=today + timedelta(days=14 + (6 - today.weekday()))
     )
 
-    strings = day_schedule_info(events, inline=is_inline)
+    strings = ScheduleInfo(events, user, inline=is_inline).inline_strings()
     await update.bot.inline.list(
         response,
         row_width=5,
@@ -307,10 +348,7 @@ async def get_lesson_info(
 ):
     """Get lesson information"""
 
-    if not is_inline:
-        response = await update.bot.inline.answer(update, Texts.LOADING)
-    else:
-        response = update
+    response = update if is_inline else await update.bot.inline.answer(update, Texts.LOADING)
 
     try:
         lesson = await api.get_schedule_item(

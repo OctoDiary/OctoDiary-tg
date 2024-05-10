@@ -14,7 +14,7 @@ import api
 from apis import APIs
 from database import User
 from handlers.router import router
-from handlers.schedule import day_schedule_info
+from handlers.schedule import ScheduleInfo
 from utils.filters import apis_and_user
 from utils.other import TIMEZONE, get_date, handler, sort_dict_by_date
 from utils.texts import Texts
@@ -163,11 +163,12 @@ async def run_scheduler_for_chat(
             disable_deadline=True,
             **(
                 sort_dict_by_date(
-                    dictionary=day_schedule_info(
+                    dictionary=ScheduleInfo(
                         events=week_events_data,
+                        user=user,
                         inline=True,
                         exclude_marks=True
-                    )
+                    ).inline_strings()
                 ) | (
                     (
                         {

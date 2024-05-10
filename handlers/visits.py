@@ -46,10 +46,7 @@ def visits_info(visits: Visits) -> str:
 @apis_and_user
 async def visits_cmd(update: Message | CallbackQuery, apis: APIs, user: User, *, is_inline: bool = False):
     """Visits information"""
-    if not is_inline:
-        response = await update.bot.inline.answer(update, Texts.LOADING)
-    else:
-        response = update
+    response = update if is_inline else await update.bot.inline.answer(update, Texts.LOADING)
 
     try:
         today = get_date()

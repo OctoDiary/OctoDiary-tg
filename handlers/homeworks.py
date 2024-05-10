@@ -59,10 +59,7 @@ async def homeworks_upcoming(
 ):
     """Homeworks upcoming"""
 
-    if not is_inline:
-        response = await update.bot.inline.answer(update, Texts.LOADING)
-    else:
-        response = update
+    response = update if is_inline else await update.bot.inline.answer(update, Texts.LOADING)
 
     response_data = await api.get_homeworks(user=user, apis=apis, type=api.HomeworkTypes.UPCOMING)
 

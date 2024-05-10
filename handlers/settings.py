@@ -27,6 +27,7 @@ NOTIFICATIONS = Texts.SETTINGS_NOTIFICATIONS
 
 
 def markup(user: User, apis: APIs, section: Optional[str] = None):
+    schedule_settings: dict[str, bool] = user.db_settings.get("schedule_details", {})
     return (
         [
             [
@@ -40,6 +41,13 @@ def markup(user: User, apis: APIs, section: Optional[str] = None):
                     "callback": notifications,
                     "kwargs": {"apis": apis, "user": user}
                 },
+            ],
+            [
+                {
+                    "text": Texts.Buttons.SCHEDULE_DETAILS,
+                    "callback": schedule_details,
+                    "kwargs": {"apis": apis, "user": user}
+                }
             ],
             [
                 {
@@ -120,7 +128,38 @@ def markup(user: User, apis: APIs, section: Optional[str] = None):
                     }
                 ]
             ]
-        ) if section == "choose_child_profile" else None
+        ) if section == "choose_child_profile" else (
+            [
+                [
+                    {
+                        "text": getattr(Texts.ScheduleDetailsSettings, key) + (
+                            " > ✅"
+                            if schedule_settings.get(key, True)
+                            else " > ❌"
+                        ),
+                        "callback": change_schedule_detail,
+                        "kwargs": {"apis": apis, "user": user, "attr": key}
+                    }
+                ]
+                for key in [
+                    "show_id",
+                    "show_other_lessons",
+                    "show_events",
+                    "show_theme",
+                    "show_homeworks",
+                    "show_marks",
+                    "show_replaces",
+                ]
+            ] + [
+                [
+                    {
+                        "text": Texts.Buttons.BACK,
+                        "callback": settings,
+                        "kwargs": {"apis": apis, "user": user}
+                    }
+                ]
+            ]
+        ) if section == "schedule_details" else []
     )
 
 
@@ -141,6 +180,7 @@ async def settings(update: Message | CallbackQuery, apis: APIs, user: User):
 
 @handler()
 async def goals(update: CallbackQuery, apis: APIs, user: User):
+    await update.answer()
     settings_data = user.db_settings
     settings_data["goals"] = not settings_data.get("goals", False)
     user.db_settings = settings_data
@@ -153,6 +193,7 @@ async def goals(update: CallbackQuery, apis: APIs, user: User):
 
 @handler()
 async def notifications(update: CallbackQuery, apis: APIs, user: User, attr: Optional[str] = None):
+    await update.answer()
     if attr:
         settings_data = user.db_settings
         settings_data["notifications"] = settings_data.get("notifications", {})
@@ -194,6 +235,7 @@ async def send_app_auth(update: CallbackQuery, user: User):
 
 @handler()
 async def choose_child_profile_menu(update: CallbackQuery, apis: APIs, user: User):
+    await update.answer()
     if str(update.from_user.id) != user.id:
         return
 
@@ -240,3 +282,33 @@ async def refresh_token(update: CallbackQuery, user: User):
     except Exception:
         logger.exception("Failed to refresh token for user %s with system %s", str(user.id), user.system)
         await update.answer(Texts.TOKEN_REFRESH_ERROR, show_alert=True, cache_time=0)
+
+
+@handler()
+async def schedule_details(update: CallbackQuery, user: User, apis: APIs):
+    if str(update.from_user.id) != user.id:
+        return
+
+    await update.bot.inline.answer(
+        update=update,
+        response=Texts.SCHEDULE_DETAILS,
+        reply_markup=markup(user, apis, "schedule_details")
+    )
+
+
+@handler()
+async def change_schedule_detail(update: CallbackQuery, user: User, apis: APIs, attr: Optional[str] = None):
+    if str(update.from_user.id) != user.id:
+        return
+
+    if attr:
+        settings_data = user.db_settings
+        settings_data["schedule_details"] = settings_data.get("schedule_details", {})
+        settings_data["schedule_details"][attr] = not settings_data["schedule_details"].get(attr, True)
+        user.db_settings = settings_data
+
+    await update.bot.inline.answer(
+        update=update,
+        response=Texts.SCHEDULE_DETAILS,
+        reply_markup=markup(user, apis, "schedule_details")
+    )

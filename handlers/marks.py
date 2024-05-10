@@ -170,10 +170,7 @@ async def marks_by_date(
 ):
     """Marks users by date"""
 
-    if not is_inline:
-        response = await update.bot.inline.answer(update, Texts.LOADING)
-    else:
-        response = update
+    response = update if is_inline else await update.bot.inline.answer(update, Texts.LOADING)
 
     marks = await api.get_marks(
         user=user,
@@ -218,10 +215,7 @@ async def marks_by_subject(
 ):
     """Marks users by subject"""
 
-    if not is_inline:
-        response = await update.bot.inline.answer(update, Texts.LOADING)
-    else:
-        response = update
+    response = update if is_inline else await update.bot.inline.answer(update, Texts.LOADING)
 
     marks = await api.get_subjects_marks(user=user, apis=apis)
 

@@ -24,7 +24,7 @@ from handlers.homeworks import homeworks_info, homeworks_past, homeworks_upcomin
 from handlers.marks import marks_by_date, marks_by_subject, marks_sorted_by_date_info, marks_sorted_by_subject_info
 from handlers.profile import profile_cmd, profile_info
 from handlers.router import router
-from handlers.schedule import day_schedule_info, get_lesson_info, lesson_info, schedule
+from handlers.schedule import ScheduleInfo, get_lesson_info, lesson_info, schedule
 from handlers.settings import TEXT, markup
 from handlers.visits import visits_cmd, visits_info
 from inline.types import AdditionalButtons
@@ -100,7 +100,7 @@ async def schedule_load(update: ChosenInlineResult, user: User, apis: APIs):
             }
         ),
         **sort_dict_by_date(
-            dictionary=day_schedule_info(events_response, inline=True)
+            dictionary=ScheduleInfo(events_response, inline=True, user=user).inline_strings(),
         ),
         row_width=5
     )

@@ -7,12 +7,12 @@ from aiogram import F
 from aiogram.enums import ChatType
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
-from octodiary.types.mobile.family_profile import Child, FamilyProfile
 
 import api
 from apis import APIs
 from database import Database, User
 from handlers.router import router
+from octodiary.types.mobile.family_profile import Child, FamilyProfile
 from utils.filters import apis_and_user
 from utils.other import handler
 from utils.texts import Texts
@@ -116,10 +116,7 @@ async def profile_cmd(
 ):
     """Get profile information"""
 
-    if not is_inline:
-        response = await update.bot.inline.answer(update, Texts.LOADING)
-    else:
-        response = update
+    response = update if is_inline else await update.bot.inline.answer(update, Texts.LOADING)
 
     profile = await api.get_profile(user=user, apis=apis)
 

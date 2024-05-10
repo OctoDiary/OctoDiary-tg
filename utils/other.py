@@ -338,3 +338,7 @@ async def refresh_mes_token(user: User, *, is_expired: bool = False):
                 profile_id=user.db_profile_id
             )
             user.db_od_auth = new_auth.model_dump(mode="json")
+
+
+def start_with_args(args: str) -> str:
+    return f"https://t.me/OctoDiary{'Test' if os.getenv('TEST') else ''}Bot?start={args}"

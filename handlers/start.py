@@ -29,6 +29,8 @@ async def start(message: Message, state: FSMContext, command: CommandObject):
             await feedback_cmd(message, state)
         elif match := re.match(r"app_auth_(.*)", command.args):
             await app_auth(message, state, match)
+        elif match := re.match(r"lesson_(.*)_(.*)", command.args):
+            await get_lesson_info(message, lesson_id=match.group(1), lesson_type=match.group(2))
         elif match := re.match(r"mark_(.*)", command.args):
             await get_mark_info(message, mark_id=match.group(1))
         return

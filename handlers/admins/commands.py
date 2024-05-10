@@ -47,11 +47,17 @@ async def statistics(message: Message):
 
 @AdminRouter.my_chat_member(ChatMemberUpdatedFilter(member_status_changed=KICKED))
 async def user_blocked_bot(message: Message):
+    if message.chat.id != message.from_user.id:
+        return
+
     db.blocked_users = [*db.blocked_users, str(message.from_user.id)]
 
 
 @AdminRouter.my_chat_member(ChatMemberUpdatedFilter(member_status_changed=MEMBER))
 async def user_unblocked_bot(message: Message):
+    if message.chat.id != message.from_user.id:
+        return
+
     blocked_users = db.blocked_users
     blocked_users.remove(message.from_user.id)
     db.blocked_users = blocked_users

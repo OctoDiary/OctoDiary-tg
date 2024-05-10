@@ -3,7 +3,7 @@
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
 import re
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Optional
 
 from aiogram import F
@@ -24,7 +24,15 @@ from octodiary.types.mobile.marks import Marks
 from octodiary.types.mobile.marks import Payload as MarkPayloadItem
 from octodiary.types.mobile.subject_marks import Payload
 from utils.filters import apis_and_user, is_authorized, user_apis
-from utils.other import get_date, handler, pluralization_string, sort_dict_by_date
+from utils.other import (
+    TIMEZONE,
+    get_date,
+    get_datetime,
+    handler,
+    pluralization_string,
+    sort_dict_by_date,
+    start_with_args,
+)
 from utils.other import mark as MARK
 from utils.texts import Texts
 
@@ -121,8 +129,12 @@ def marks_sorted_by_subject_info(marks: api.APIResponse[SubjectsMarks], goals: b
                             MARKS_COUNT=pluralization_string(period.count, ["оценка", "оценки", "оценок"]),
                         )
                         for item in marks.response.payload
-                        for period in item.periods
-                        if not period.fixed_value and period.value
+                        for period in filter(
+                            lambda x: datetime.strptime(
+                                x.end_iso,
+                                "%Y-%m-%d"
+                            ).replace(tzinfo=TIMEZONE) > get_datetime(), item.periods
+                        )
                     }.items(),
                     key=lambda x: float(x[0]),
                     reverse=True

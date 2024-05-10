@@ -154,15 +154,12 @@ async def get_schedule_item(
         user: User,
         apis: APIs,
         lesson_id: int,
+        lesson_type: str = "PLAN"
 ):
     return await apis.mobile.get_lesson_schedule_item(
         profile_id=user.db_profile_id,
         student_id=user.db_current_child["id"] if user.db_current_child else user.db_profile["children"][0]["id"],
-        lesson_id=lesson_id
-    ) if user.system == Texts.Systems.MY_SCHOOL else await apis.mobile.get_lesson_schedule_item(
-        profile_id=user.db_profile_id,
-        student_id=user.db_current_child["id"] if user.db_current_child else user.db_profile["children"][0]["id"],
-        lesson_id=lesson_id
+        lesson_id=lesson_id, type=lesson_type
     )
 
 

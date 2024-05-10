@@ -373,4 +373,6 @@
     },
     "MARK_NOT_FOUND": "\uD83D\uDEAB Оценка не найдена"
     "LESSON_NOT_FOUND": "\uD83D\uDEAB Урок не найден"
+    "MARK_NOT_FOUND": "\uD83D\uDEAB Оценка не найдена!",
+    "LESSON_NOT_FOUND": "\uD83D\uDEAB Урок не найден!"
 }

@@ -301,6 +301,7 @@ async def get_lesson_info(
         user: User,
         command: CommandObject = None,
         lesson_id: Optional[str] = None,
+        lesson_type: Optional[str] = None,
         *,
         is_inline: bool = False
 ):
@@ -311,11 +312,15 @@ async def get_lesson_info(
     else:
         response = update
 
-    lesson = await api.get_schedule_item(
-        user=user,
-        apis=apis,
-        lesson_id=int(command.args.strip() if command else lesson_id)
-    )
+    try:
+        lesson = await api.get_schedule_item(
+            user=user,
+            apis=apis,
+            lesson_id=int(command.args.strip() if command else lesson_id),
+            lesson_type=lesson_type if lesson_type else "PLAN"
+        )
+    except Exception:
+        return await update.answer(Texts.LESSON_NOT_FOUND)
 
     await update.bot.inline.answer(
         response,

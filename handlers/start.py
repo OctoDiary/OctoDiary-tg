@@ -14,7 +14,7 @@ from aiogram.types import Message
 from database import Database
 from handlers.auth import app_auth
 from handlers.feedback import feedback_cmd
-from handlers.schedule import get_mark_info
+from handlers.schedule import get_lesson_info, get_mark_info
 from utils.keyboard import ABOUT, DEFAULT, DEFAULT_MES
 from utils.other import get_hash
 from utils.texts import Texts

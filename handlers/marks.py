@@ -40,6 +40,7 @@ from utils.texts import Texts
 def mark_info(mark: MarkPayloadItem):
     return Texts.MARK_INFO(
         SUBJECT_NAME=mark.subject_name,
+        MARK_URL=start_with_args("mark_" + str(mark.id)),
         MARK=MARK(mark.value, mark.weight),
         CONTROL_FORM_NAME=mark.control_form_name,
         WEIGHT=pluralization_string(mark.weight, ["балл", "балла", "баллов"]),

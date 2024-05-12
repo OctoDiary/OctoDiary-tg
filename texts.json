@@ -148,7 +148,7 @@
         }
     },
     "HOMEWORKS_FOR_DATE": "📝 <b>Домашние задания на {DATE}:</b>\n\n",
-    "MARK_INFO": "┌ <b>Предмет</b>: <code>{SUBJECT_NAME}</code>\n├ <b>Оценка</b>: <code>{MARK}</code>\n├ <b>Тип</b> работы: <code>{CONTROL_FORM_NAME}</code> - {WEIGHT}{IS_EXAM_EMOJI}\n├ <b>Дата и время</b> выставления/изменения оценки: <code>{UPDATED_AT}</code>\n└ <b>Комментарий</b>: <code>{COMMENT}</code>",
+    "MARK_INFO": "┌ <b>Предмет</b>: <code>{SUBJECT_NAME}</code>\n├ <b>Оценка</b>: <a href=\"{MARK_URL}\">{MARK}</a>\n├ <b>Тип</b> работы: <code>{CONTROL_FORM_NAME}</code> - {WEIGHT}{IS_EXAM_EMOJI}\n├ <b>Дата и время</b> выставления/изменения оценки: <code>{UPDATED_AT}</code>\n└ <b>Комментарий</b>: <code>{COMMENT}</code>",
     "MARKS_FOR_DATE": "📝 <b>Оценки за {DATE}:</b>\n\n",
     "GOAL": "├ <b>Цель</b>: <code>{ROUND}</code> → <code>{VALUE}</code>\n├ <b>Нужные оценки для достижения цели</b>: <code>",
     "OR": "</code> или <code>",

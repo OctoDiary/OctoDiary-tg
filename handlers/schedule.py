@@ -231,7 +231,7 @@ def homework_info(homework: LessonHomework) -> str:
 
 
 def lesson_info(lesson: LessonScheduleItem) -> str:
-    return Texts.LESSON_INFO(lesson=lesson, topic=lesson.details.lesson_topic.strip() or "❌") + (
+    return Texts.LESSON_INFO(lesson=lesson, topic=lesson.details.lesson_topic or "❌") + (
         (
             Texts.LESSON_INFO_DETAILS.THEMES + (
                 "\n".join([

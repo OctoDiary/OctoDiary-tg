@@ -113,7 +113,8 @@
         "WITH_NULL": "Пустой список оценок",
         "CALCULATOR": "Калькулятор оценок",
         "REFRESH_TOKEN": "Обновить API-Токен",
-        "SCHEDULE_DETAILS": "Детали расписания"
+        "SCHEDULE_DETAILS": "Детали расписания",
+        "LESSON_INFO": "Информация об уроке"
     },
     "TOKEN_REFRESHED": "✅ Токен успешно обновлен!",
     "TOKEN_REFRESH_ERROR": "❗️ Произошла ошибка при обновлении токена. Попробуйте ещё раз!\n\nЕсли не получится, попробуйте переавторизоваться - /reauth",
@@ -172,7 +173,7 @@
         "HOMEWORKS": "\n\n[ <b>Домашнее задание</b> ]\n",
         "THEMES": "\n\n[ <b>Темы урока</b> ]\n"
     },
-    "MARK_INFO_FULL": "<b>Подробная информация</b> o6 оценке: <code>{mark.id}</code>\n\n• <b>Оценка</b>: <code>{mark.value}</code>\n• <b>Вес</b>: <b>{WEIGHT}</b>\n• <b>Комментарий</b>: <i>{COMMENT}</i>\n• <b>Тип работы</b>: <code>{mark.control_form_name}</code> {IS_EXAM_EMOJI}\n• <b>Преподаватель</b>: <code>{mark.teacher.last_name} {mark.teacher.first_name} {mark.teacher.middle_name}</code>\n• <b>Время выставления</b>: <code>{CREATED_AT}</code>\n• <b>Дата урока</b>: <code>{mark.date}</code>\n• <b>Тема урока</b>: <b>{mark.activity.lesson_topic}</b>\n• <b><a href=\"{LESSON_INFO_URL}\">Инфо об уроке</a></b>",
+    "MARK_INFO_FULL": "<b>Подробная информация</b> o6 оценке: <code>{mark.id}</code>\n\n• <b>Оценка</b>: <code>{mark.value}</code>\n• <b>Вес</b>: <b>{WEIGHT}</b>\n• <b>Комментарий</b>: <i>{COMMENT}</i>\n• <b>Тип работы</b>: <code>{mark.control_form_name}</code> {IS_EXAM_EMOJI}\n• <b>Преподаватель</b>: <code>{mark.teacher.last_name} {mark.teacher.first_name} {mark.teacher.middle_name}</code>\n• <b>Время выставления</b>: <code>{CREATED_AT}</code>\n• <b>Дата урока</b>: <code>{mark.date}</code>\n• <b>Тема урока</b>: <b>{mark.activity.lesson_topic}</b>",
     "MARK_INFO_DETAILS": {
         "STATISTICS": "\n\n[ <b>Статистика</b> ]\n• Оценку за эту работу получили <b>{TOTAL_STUDENTS_COUNT}</b>\n"
     },

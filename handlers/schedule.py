@@ -258,13 +258,12 @@ def lesson_info(lesson: LessonScheduleItem) -> str:
     )
 
 
-def mark_info_text(mark: MarkInfo) -> str:
+def mark_info_text(mark: MarkInfo) -> tuple[str, str]:
     return Texts.MARK_INFO_FULL(
         mark=mark,
         WEIGHT=pluralization_string(mark.weight, ["балл", "балла", "баллов"]),
         COMMENT=mark.comment or "❌",
         CREATED_AT=mark.updated_at.strftime("%d.%m.%Y %H:%M"),
-        LESSON_INFO_URL=start_with_args(f"lesson_{mark.activity.schedule_item_id}_PLAN"),
         IS_EXAM_EMOJI="❗️" if mark.is_exam else "",
     ) + (
         Texts.MARK_INFO_DETAILS.STATISTICS(
@@ -283,7 +282,7 @@ def mark_info_text(mark: MarkInfo) -> str:
                 for mark_stat in mark.class_results.marks_distributions
             ])
         ) + "</blockquote>"
-    )
+    ), start_with_args(f"lesson_{mark.activity.schedule_item_id}_PLAN")
 
 
 @router.message(Command("schedule"))
@@ -403,21 +402,33 @@ async def get_mark_info(
     except Exception:
         return await update.answer(Texts.MARK_NOT_FOUND)
 
+    text, button_url = mark_info_text(mark_data.response)
+
     await update.bot.inline.answer(
         response,
-        response=mark_info_text(mark_data.response),
-        reply_markup={
-            "text": Texts.Buttons.UPDATE,
-            "callback": get_mark_info,
-            "kwargs": {
-                "apis": apis,
-                "user": user,
-                "mark_id": mark_id,
-                "command": command
-            },
-            "reusable": True,
-            "disable_deadline": True
-        }
+        response=text,
+        reply_markup=[
+            [
+                {
+                    "text": Texts.Buttons.LESSON_INFO,
+                    "url": button_url
+                }
+            ],
+            [
+                {
+                    "text": Texts.Buttons.UPDATE,
+                    "callback": get_mark_info,
+                    "kwargs": {
+                        "apis": apis,
+                        "user": user,
+                        "mark_id": mark_id,
+                        "command": command
+                    },
+                    "reusable": True,
+                    "disable_deadline": True
+                }
+            ]
+        ]
     )
 
     if isinstance(update, CallbackQuery):

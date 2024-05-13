@@ -21,7 +21,7 @@ from octodiary.exceptions import APIError
 from octodiary.types.mobile import EventsResponse
 from octodiary.types.mobile.marks import Payload
 from utils.filters import user_apis
-from utils.other import TIMEZONE, get_date, get_datetime, mark, pluralization_string, refresh_mes_token
+from utils.other import TIMEZONE, get_date, get_datetime, mark, pluralization_string, refresh_mes_token, start_with_args
 from utils.texts import Texts
 
 db = Database()
@@ -164,6 +164,7 @@ def generate_text_notification(
     if edited:
         text += texts.OLD_MARK(MARK=old_mark_value)
     text += (texts.NEW_MARK if not hide_mark else texts.HIDDEN_MARK)(
+        LINK=start_with_args(f"mark_{mark_data.id}"),
         MARK=mark(mark_data.value, mark_data.weight)
     )
     text += texts.WORK_TYPE(

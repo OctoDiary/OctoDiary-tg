@@ -128,23 +128,23 @@
         "Mark": {
             "SUBTITLE": " [ <b>Оценка</b> ] {CHILD_NAME}\n\n",
             "SUBJECT": "┌ <b>Предмет</b>: <code>{SUBJECT_NAME}</code>\n",
-            "NEW_MARK": "├ <b>Новая оценка</b>: <code>{MARK}</code>\n",
+            "NEW_MARK": "├ <b>Новая оценка</b>: <a href=\"{LINK}\">{MARK}</a>\n",
             "WORK_TYPE": "├ <b>Тип</b> работы: <code>{CONTROL_FORM_NAME}</code> - {WEIGHT} {IS_EXAM_EMOJI}\n",
             "COMMENT": "├ <b>Комментарий</b>: <code>{COMMENT}</code>\n",
             "LESSON_DATE": "└ <b>Дата</b> урока: <code>{TIME}</code>\n\n",
             "HASHTAGS": "<tg-spoiler>#newMark #notification #date_{DATE}</tg-spoiler>",
-            "HIDDEN_MARK": "├ <b>Новая оценка</b>: <tg-spoiler>{MARK}</tg-spoiler>\n"
+            "HIDDEN_MARK": "├ <b>Новая оценка</b>: <tg-spoiler><a href=\"{LINK}\">{MARK}</a></tg-spoiler>\n"
         },
         "EditedMark": {
             "SUBTITLE": " [ <b>Оценка</b> ] [ <b>Изменение</b> ] {CHILD_NAME}\n\n",
             "SUBJECT": "┌ <b>Предмет</b>: <code>{SUBJECT_NAME}</code>\n",
             "OLD_MARK": "├ <b>Старая</b> оценка: <code>{MARK}</code>\n",
-            "NEW_MARK": "├ <b>Новая оценка</b>: <code>{MARK}</code>\n",
+            "NEW_MARK": "├ <b>Новая оценка</b>: <a href=\"{LINK}\">{MARK}</a>\n",
             "WORK_TYPE": "├ <b>Тип</b> работы: <code>{CONTROL_FORM_NAME}</code> - {WEIGHT} {IS_EXAM_EMOJI}\n",
             "COMMENT": "├ <b>Комментарий</b>: <code>{COMMENT}</code>\n",
             "LESSON_DATE": "└ <b>Дата</b> урока: <code>{TIME}</code>\n\n",
             "HASHTAGS": "<tg-spoiler>#editedMark #notification #date_{DATE}</tg-spoiler>",
-            "HIDDEN_MARK": "├ <b>Новая оценка</b>: <tg-spoiler>{MARK}</tg-spoiler>\n"
+            "HIDDEN_MARK": "├ <b>Новая оценка</b>: <tg-spoiler><a href=\"{LINK}\">{MARK}</a></tg-spoiler>\n"
         }
     },
     "HOMEWORKS_FOR_DATE": "📝 <b>Домашние задания на {DATE}:</b>\n\n",

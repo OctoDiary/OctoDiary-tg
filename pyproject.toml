@@ -17,6 +17,7 @@ lightdb = "^1.4.0"
 segno = "^1.6.0"
 octodiary = {git = "https://github.com/OctoDiary/OctoDiary-py.git"}
 loguru = "^0.7.2"
+requests = "^2.31.0"
 
 
 [build-system]

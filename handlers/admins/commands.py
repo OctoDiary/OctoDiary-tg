@@ -5,11 +5,12 @@
 
 import asyncio
 import contextlib
+import os
 from datetime import date
 
 from aiogram import F
 from aiogram.filters import KICKED, MEMBER, ChatMemberUpdatedFilter, Command, CommandObject
-from aiogram.types import BufferedInputFile, Message, CallbackQuery
+from aiogram.types import CallbackQuery, Message, ReactionTypeEmoji
 
 from database import Database
 from handlers.admins.router import AdminRouter
@@ -128,3 +129,9 @@ async def start_notify(callback: CallbackQuery, message, command: CommandObject)
             )
         )
     )
+
+
+@AdminRouter.message(Command("shutdown"), AdminFilter)
+async def shutdown(message: Message):
+    await message.react([ReactionTypeEmoji(emoji="👌")])
+    os._exit(0)

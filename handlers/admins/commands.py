@@ -9,7 +9,7 @@ from datetime import date
 
 from aiogram import F
 from aiogram.filters import KICKED, MEMBER, ChatMemberUpdatedFilter, Command, CommandObject
-from aiogram.types import Message
+from aiogram.types import BufferedInputFile, Message, CallbackQuery
 
 from database import Database
 from handlers.admins.router import AdminRouter
@@ -69,13 +69,39 @@ async def notify(message: Message, command: CommandObject):
         await message.answer(text=Texts.Admin.NOTIFY_NO_REPLY)
         return
 
+    await message.bot.inline.answer(
+        message,
+        response=Texts.NOTIFY_CONFIRM,
+        reply_markup=[
+            {
+                "text": Texts.Buttons.OK,
+                "callback": start_notify,
+                "kwargs": {
+                    "message": message,
+                    "command": command
+                }
+            },
+            {
+                "text": Texts.Buttons.CANCEL,
+                "callback": delete
+            }
+        ]
+    )
+
+
+async def delete(callback: CallbackQuery):
+    await callback.answer()
+    await callback.message.delete()
+
+
+async def start_notify(callback: CallbackQuery, message, command: CommandObject):
     args = (command.args or "").split(" ")
     system = ""
     for arg in args:
         if arg in ["-s", "--system"]:
             system = args[args.index(arg) + 1]
 
-    _message = await message.answer(
+    _message = await callback.message.edit_text(
         text=Texts.Admin.NOTIFY_SENDING
     )
 

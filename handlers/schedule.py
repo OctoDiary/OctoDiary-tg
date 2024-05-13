@@ -263,7 +263,7 @@ def mark_info_text(mark: MarkInfo) -> tuple[str, str]:
         mark=mark,
         WEIGHT=pluralization_string(mark.weight, ["балл", "балла", "баллов"]),
         COMMENT=mark.comment or "❌",
-        CREATED_AT=mark.updated_at.strftime("%d.%m.%Y %H:%M"),
+        CREATED_AT=mark.updated_at.strftime("%Y-%m-%d %H:%M"),
         IS_EXAM_EMOJI="❗️" if mark.is_exam else "",
     ) + (
         Texts.MARK_INFO_DETAILS.STATISTICS(

@@ -774,7 +774,7 @@ pydantic = "*"
 type = "git"
 url = "https://github.com/OctoDiary/OctoDiary-py.git"
 reference = "HEAD"
-resolved_reference = "a1d051ce6db2546d438af4e2f971422cff283f1e"
+resolved_reference = "8a712afea4a5a5e63455a71cb09b28e4a4cad23b"
 
 [[package]]
 name = "pycparser"

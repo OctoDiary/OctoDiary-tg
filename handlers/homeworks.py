@@ -2,6 +2,7 @@
 #          Licensed under the MIT License
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
+import random
 
 from aiogram import F
 from aiogram.enums import ChatType
@@ -62,6 +63,30 @@ async def homeworks_upcoming(
     response = update if is_inline else await update.bot.inline.answer(update, Texts.LOADING)
 
     response_data = await api.get_homeworks(user=user, apis=apis, type=api.HomeworkTypes.UPCOMING)
+    strings = homeworks_info(response_data)
+
+    if not strings:
+        await update.bot.inline.answer(
+            response,
+            Texts.NOT_INFO.format(
+                random.choice(["🫥", "😶‍🌫️", "😶", "🫠", "🫣"]),
+                "о Д/З"
+            ),
+            reply_markup=[
+                {
+                    "text": Texts.Buttons.UPDATE,
+                    "callback": homeworks_upcoming,
+                    "kwargs": {
+                        "apis": apis,
+                        "user": user,
+                        "is_inline": is_inline
+                    },
+                    "reusable": True,
+                    "disable_deadline": True
+                }
+            ]
+        )
+        return
 
     await update.bot.inline.list(
         update=response,
@@ -79,7 +104,7 @@ async def homeworks_upcoming(
                 "disable_deadline": True
             }
         ),
-        **sort_dict_by_date(homeworks_info(response_data)),
+        **sort_dict_by_date(strings),
     )
 
     if isinstance(update, CallbackQuery):
@@ -102,6 +127,30 @@ async def homeworks_past(
     response = update if is_inline else await update.bot.inline.answer(update, Texts.LOADING)
 
     response_data = await api.get_homeworks(user=user, apis=apis, type=api.HomeworkTypes.PAST)
+    strings = homeworks_info(response_data)
+
+    if not strings:
+        await update.bot.inline.answer(
+            response,
+            Texts.NOT_INFO.format(
+                random.choice(["🫥", "😶‍🌫️", "😶", "🫠", "🫣"]),
+                "о Д/З"
+            ),
+            reply_markup=[
+                {
+                    "text": Texts.Buttons.UPDATE,
+                    "callback": homeworks_upcoming,
+                    "kwargs": {
+                        "apis": apis,
+                        "user": user,
+                        "is_inline": is_inline
+                    },
+                    "reusable": True,
+                    "disable_deadline": True
+                }
+            ]
+        )
+        return
 
     await update.bot.inline.list(
         update=response,
@@ -119,7 +168,7 @@ async def homeworks_past(
                 "disable_deadline": True
             }
         ),
-        **sort_dict_by_date(homeworks_info(response_data), reverse=True)
+        **sort_dict_by_date(strings, reverse=True)
     )
 
     if isinstance(update, CallbackQuery):

@@ -2,7 +2,8 @@
 #          Licensed under the MIT License
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
-
+import datetime
+import random
 from datetime import timedelta
 from re import Match
 
@@ -77,12 +78,41 @@ async def inline_query(update: InlineQuery, apis: APIs, user: User):
 @apis_and_user
 async def schedule_load(update: ChosenInlineResult, user: User, apis: APIs):
     today = get_date()
+    end_date = (today + timedelta(days=14 + (6 - today.weekday())))
     events_response = await api.get_events(
         user=user,
         apis=apis,
         begin_date=(today - timedelta(days=-1 * (0 - today.weekday()))),
-        end_date=(today + timedelta(days=14 + (6 - today.weekday())))
+        end_date=end_date
     )
+    strings = ScheduleInfo(events_response, inline=True, user=user).inline_strings()
+
+    if not strings:
+        await update.bot.inline.answer(
+            update,
+            Texts.NOT_SCHEDULE.format(
+                random.choice(["🫥", "😶‍🌫️", "😶", "🫠", "🫣"]), "до",
+                end_date.strftime("%d.%m")
+            ),
+            reply_markup=[
+                {
+                    "text": Texts.Buttons.UPDATE,
+                    "callback": schedule,
+                    "kwargs": {
+                        "apis": apis,
+                        "user": user,
+                        "is_inline": True
+                    },
+                    "reusable": True,
+                    "disable_deadline": True
+                },
+                {
+                    "text": Texts.Buttons.SCHEDULE_CHOOSE_DATE,
+                    "switch_inline_query_current_chat": "SD "
+                }
+            ]
+        )
+        return
 
     await update.bot.inline.list(
         update,
@@ -100,7 +130,7 @@ async def schedule_load(update: ChosenInlineResult, user: User, apis: APIs):
             }
         ),
         **sort_dict_by_date(
-            dictionary=ScheduleInfo(events_response, inline=True, user=user).inline_strings(),
+            dictionary=strings,
         ),
         row_width=5
     )
@@ -152,6 +182,30 @@ async def homeworks_upcoming_load(update: ChosenInlineResult, user: User, apis: 
         apis=apis,
         type=api.HomeworkTypes.UPCOMING
     )
+    strings = homeworks_info(homeworks)
+
+    if not strings:
+        await update.bot.inline.answer(
+            update,
+            Texts.NOT_INFO.format(
+                random.choice(["🫥", "😶‍🌫️", "😶", "🫠", "🫣"]),
+                "о Д/З"
+            ),
+            reply_markup=[
+                {
+                    "text": Texts.Buttons.UPDATE,
+                    "callback": homeworks_upcoming,
+                    "kwargs": {
+                        "apis": apis,
+                        "user": user,
+                        "is_inline": True
+                    },
+                    "reusable": True,
+                    "disable_deadline": True
+                }
+            ]
+        )
+        return
 
     await update.bot.inline.list(
         update=update,
@@ -169,7 +223,7 @@ async def homeworks_upcoming_load(update: ChosenInlineResult, user: User, apis: 
                 "disable_deadline": True
             }
         ),
-        **sort_dict_by_date(homeworks_info(homeworks)),
+        **sort_dict_by_date(strings),
     )
 
 
@@ -188,6 +242,30 @@ async def homeworks_past_load(update: ChosenInlineResult, user: User, apis: APIs
         apis=apis,
         type=api.HomeworkTypes.PAST
     )
+    strings = homeworks_info(homeworks)
+
+    if not strings:
+        await update.bot.inline.answer(
+            update,
+            Texts.NOT_INFO.format(
+                random.choice(["🫥", "😶‍🌫️", "😶", "🫠", "🫣"]),
+                "о Д/З"
+            ),
+            reply_markup=[
+                {
+                    "text": Texts.Buttons.UPDATE,
+                    "callback": homeworks_upcoming,
+                    "kwargs": {
+                        "apis": apis,
+                        "user": user,
+                        "is_inline": True
+                    },
+                    "reusable": True,
+                    "disable_deadline": True
+                }
+            ]
+        )
+        return
 
     await update.bot.inline.list(
         update=update,
@@ -205,7 +283,7 @@ async def homeworks_past_load(update: ChosenInlineResult, user: User, apis: APIs
                 "disable_deadline": True
             }
         ),
-        **sort_dict_by_date(homeworks_info(homeworks), reverse=True),
+        **sort_dict_by_date(strings, reverse=True),
     )
 
 
@@ -225,6 +303,30 @@ async def marks_by_date_load(update: ChosenInlineResult, user: User, apis: APIs)
         from_date=get_date() - timedelta(days=14),
         to_date=get_date(),
     )
+    strings = marks_sorted_by_date_info(marks)
+
+    if not strings:
+        await update.bot.inline.answer(
+            update,
+            Texts.NOT_INFO.format(
+                random.choice(["🫥", "😶‍🌫️", "😶", "🫠", "🫣"]),
+                "об оценках"
+            ),
+            reply_markup=[
+                {
+                    "text": Texts.Buttons.UPDATE,
+                    "callback": marks_by_date,
+                    "kwargs": {
+                        "apis": apis,
+                        "user": user,
+                        "is_inline": True
+                    },
+                    "reusable": True,
+                    "disable_deadline": True
+                }
+            ]
+        )
+        return
 
     await update.bot.inline.list(
         update=update,
@@ -242,7 +344,7 @@ async def marks_by_date_load(update: ChosenInlineResult, user: User, apis: APIs)
                 "disable_deadline": True
             }
         ),
-        **sort_dict_by_date(marks_sorted_by_date_info(marks), reverse=True),
+        **sort_dict_by_date(strings, reverse=True),
     )
 
 
@@ -257,14 +359,38 @@ async def marks_by_date_load(update: ChosenInlineResult, user: User, apis: APIs)
 @apis_and_user
 async def marks_by_subject_load(update: ChosenInlineResult, user: User, apis: APIs):
     marks = await api.get_subjects_marks(user, apis)
+    strings = marks_sorted_by_subject_info(
+        marks,
+        user.db_settings.get("goals", False)
+    )
+
+    if not strings:
+        await update.bot.inline.answer(
+            update,
+            Texts.NOT_INFO.format(
+                random.choice(["🫥", "😶‍🌫️", "😶", "🫠", "🫣"]),
+                "об оценках"
+            ),
+            reply_markup=[
+                {
+                    "text": Texts.Buttons.UPDATE,
+                    "callback": marks_by_subject,
+                    "kwargs": {
+                        "apis": apis,
+                        "user": user,
+                        "is_inline": True
+                    },
+                    "reusable": True,
+                    "disable_deadline": True
+                }
+            ]
+        )
+        return
 
     await update.bot.inline.list(
         update=update,
         row_width=2,
-        strings=marks_sorted_by_subject_info(
-            marks,
-            user.db_settings.get("goals", False)
-        ),
+        strings=strings,
         additional_buttons=AdditionalButtons(
             below_buttons={
                 "text": Texts.Buttons.UPDATE,
@@ -421,4 +547,148 @@ async def lesson_info_load(update: ChosenInlineResult, user: User, apis: APIs, m
                 "disable_deadline": True
             }
         )
+    )
+
+
+@router.inline_query(
+    F.query.strip().regexp(r"SD (.[0-9]{0,1})\.(.[0-9]{0,1})\.?(.[0-9]{4})?").as_("match")
+)
+@handler()
+async def schedule_choose_date_inline_query(update: InlineQuery, match: Match):
+    d = match.group(1)
+    m = match.group(2)
+    y = match.group(3)
+
+    if int(d) > 31 or int(m) > 12 or (y and int(y) > 2099) or int(d) < 1 or int(m) < 1 or (y and int(y) < 2020):
+        return await schedule_choose_date_example_inline_query(update)
+
+    dt = f"{d}.{m}" + (f".{y}" if y else "")
+
+    return await update.answer(
+        [
+            InlineQueryResultArticle(
+                id=Texts.InlineQueryScheduleChooseDateInfo.ID(DATE=dt),
+                title=Texts.InlineQueryScheduleChooseDateInfo.TITLE(DATE=dt),
+                description=Texts.InlineQueryScheduleChooseDateInfo.DESCRIPTION,
+                thumbnail_url=Texts.InlineQueryScheduleChooseDateInfo.THUMBNAIL_URL,
+                reply_markup=InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [
+                            InlineKeyboardButton(
+                                text=Texts.CLICK_TO_LOAD,
+                                callback_data=Texts.InlineQueryScheduleChooseDateInfo.ID(DATE=dt)
+                            )
+                        ]
+                    ]
+                ),
+                input_message_content=InputTextMessageContent(
+                    message_text=Texts.INLINE_MESSAGE_TEXT
+                ),
+            )
+        ],
+        cache_time=10,
+        is_personal=True,
+        button=InlineQueryResultsButton(
+            **Texts.INLINE_QUERY_RESULTS_BUTTON
+        )
+    )
+
+
+@router.inline_query(
+    F.query.strip().in_(["SD", "SD "])
+)
+@handler()
+async def schedule_choose_date_example_inline_query(update: InlineQuery):
+    return await update.answer(
+        [
+            InlineQueryResultArticle(
+                id=Texts.InlineQueryScheduleChooseDateInfo.ID(DATE=f"00.00.0000"),
+                title=Texts.InlineQueryScheduleChooseDateInfo.EXAMPLE_TITLE,
+                description=Texts.InlineQueryScheduleChooseDateInfo.DESCRIPTION,
+                thumbnail_url=Texts.InlineQueryScheduleChooseDateInfo.THUMBNAIL_URL,
+                reply_markup=InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [
+                            InlineKeyboardButton(
+                                text=Texts.CLICK_TO_LOAD,
+                                callback_data=Texts.InlineQueryScheduleChooseDateInfo.ID(DATE=f"00.00.0000")
+                            )
+                        ]
+                    ]
+                ),
+                input_message_content=InputTextMessageContent(
+                    message_text=Texts.INLINE_MESSAGE_TEXT
+                ),
+            )
+        ],
+        cache_time=10,
+        is_personal=True,
+        button=InlineQueryResultsButton(
+            **Texts.INLINE_QUERY_RESULTS_BUTTON
+        )
+    )
+
+
+@router.chosen_inline_result(
+    F.result_id.regexp(r"schedule:(.[0-9]{0,1})\.(.[0-9]{0,1})\.?(.[0-9]{4})?").as_("match"),
+    F.inline_message_id.func(lambda inline_message_id: inline_message_id is not None)
+)
+@router.callback_query(
+    F.data.regexp(r"schedule:(.[0-9]{0,1})\.(.[0-9]{0,1})\.?(.[0-9]{4})?").as_("match")
+)
+@handler()
+@apis_and_user
+async def lesson_info_load(update: ChosenInlineResult, user: User, apis: APIs, match: Match):
+    d = match.group(1)
+    m = match.group(2)
+    y = match.group(3)
+
+    if d == "00" and m == "00" and y == "0000":
+        return await update.bot.edit_message_text(
+            text=Texts.InlineQueryScheduleChooseDateInfo.EXAMPLE_TITLE,
+            reply_markup=update.bot.inline.generate_markup({
+                "text": Texts.Buttons.SCHEDULE_CHOOSE_DATE,
+                "switch_inline_query_current_chat": "SD "
+            }),
+            inline_message_id=update.inline_message_id
+        )
+
+    dt = datetime.date(year=int(y or datetime.date.today().year), month=int(m), day=int(d))
+
+    events_response = await api.get_events(
+        user=user,
+        apis=apis,
+        begin_date=dt,
+        end_date=dt
+    )
+
+    strings = ScheduleInfo(events_response, inline=True, user=user).inline_strings()
+    if not strings:
+        await update.bot.inline.answer(
+            update,
+            Texts.NOT_SCHEDULE.format(
+                random.choice(["🫥", "😶‍🌫️", "😶", "🫠", "🫣"]), "на",
+                f"{d}.{m}" + (f".{y}" if y else ""),
+            ),
+            reply_markup=[
+                {
+                    "text": Texts.Buttons.SCHEDULE_CHOOSE_DATE,
+                    "switch_inline_query_current_chat": "SD "
+                }
+            ]
+        )
+        return
+
+    await update.bot.inline.list(
+        update,
+        additional_buttons=AdditionalButtons(
+            below_buttons={
+                "text": Texts.Buttons.SCHEDULE_CHOOSE_DATE,
+                "switch_inline_query_current_chat": "SD "
+            }
+        ),
+        **sort_dict_by_date(
+            dictionary=strings,
+        ),
+        row_width=5
     )

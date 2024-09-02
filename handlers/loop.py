@@ -125,8 +125,11 @@ async def save_user_data(user_id, bot: Bot):
                 ),
             )
             user["server-is-not-available-notified-id"] = message.message_id
-        elif e.status_code == 401 and user.system == Texts.Systems.MES:
-            await refresh_mes_token(user=user, is_expired=True)
+        elif e.status_code == 401:
+            if user.system == Texts.Systems.MES:
+                await refresh_mes_token(user=user, is_expired=True)
+            else:
+                await refresh_tokens()
 
 
 @LoopRouter.startup()

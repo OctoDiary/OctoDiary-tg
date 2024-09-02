@@ -2,6 +2,7 @@
 #          Licensed under the MIT License
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
+import random
 import re
 from datetime import date, datetime, timedelta
 from typing import Optional
@@ -301,14 +302,43 @@ async def schedule(
     response = update if is_inline else await update.bot.inline.answer(update, Texts.LOADING)
 
     today = get_date()
+    end_date = today + timedelta(days=14 + (6 - today.weekday()))
     events = await api.get_events(
         user=user,
         apis=apis,
         begin_date=today - timedelta(days=-1 * (0 - today.weekday())),
-        end_date=today + timedelta(days=14 + (6 - today.weekday()))
+        end_date=end_date
     )
 
     strings = ScheduleInfo(events, user, inline=is_inline).inline_strings()
+
+    if not strings:
+        await update.bot.inline.answer(
+            response,
+            Texts.NOT_SCHEDULE.format(
+                random.choice(["🫥", "😶‍🌫️", "😶", "🫠", "🫣"]), "до",
+                end_date.strftime("%d.%m")
+            ),
+            reply_markup=[
+                {
+                    "text": Texts.Buttons.UPDATE,
+                    "callback": schedule,
+                    "kwargs": {
+                        "apis": apis,
+                        "user": user,
+                        "is_inline": is_inline
+                    },
+                    "reusable": True,
+                    "disable_deadline": True
+                },
+                {
+                    "text": Texts.Buttons.SCHEDULE_CHOOSE_DATE,
+                    "switch_inline_query_current_chat": "SD "
+                }
+            ]
+        )
+        return
+
     await update.bot.inline.list(
         response,
         row_width=5,

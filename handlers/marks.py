@@ -2,6 +2,7 @@
 #          Licensed under the MIT License
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
+import random
 import re
 from datetime import datetime, timedelta
 from typing import Optional
@@ -179,6 +180,30 @@ async def marks_by_date(
         from_date=get_date() - timedelta(days=14),
         to_date=get_date(),
     )
+    strings = marks_sorted_by_date_info(marks)
+
+    if not strings:
+        await update.bot.inline.answer(
+            response,
+            Texts.NOT_INFO.format(
+                random.choice(["🫥", "😶‍🌫️", "😶", "🫠", "🫣"]),
+                "об оценках"
+            ),
+            reply_markup=[
+                {
+                    "text": Texts.Buttons.UPDATE,
+                    "callback": marks_by_date,
+                    "kwargs": {
+                        "apis": apis,
+                        "user": user,
+                        "is_inline": is_inline
+                    },
+                    "reusable": True,
+                    "disable_deadline": True
+                }
+            ]
+        )
+        return
 
     await update.bot.inline.list(
         update=response,
@@ -196,7 +221,7 @@ async def marks_by_date(
                 "disable_deadline": True
             }
         ),
-        **sort_dict_by_date(marks_sorted_by_date_info(marks), reverse=True)
+        **sort_dict_by_date(strings, reverse=True)
     )
 
     if isinstance(update, CallbackQuery):
@@ -219,14 +244,38 @@ async def marks_by_subject(
     response = update if is_inline else await update.bot.inline.answer(update, Texts.LOADING)
 
     marks = await api.get_subjects_marks(user=user, apis=apis)
+    strings = marks_sorted_by_subject_info(
+        marks,
+        user.db_settings.get("goals", False)
+    )
+
+    if not strings:
+        await update.bot.inline.answer(
+            response,
+            Texts.NOT_INFO.format(
+                random.choice(["🫥", "😶‍🌫️", "😶", "🫠", "🫣"]),
+                "об оценках"
+            ),
+            reply_markup=[
+                {
+                    "text": Texts.Buttons.UPDATE,
+                    "callback": marks_by_subject,
+                    "kwargs": {
+                        "apis": apis,
+                        "user": user,
+                        "is_inline": is_inline
+                    },
+                    "reusable": True,
+                    "disable_deadline": True
+                }
+            ]
+        )
+        return
 
     await update.bot.inline.list(
         update=response,
         row_width=2,
-        strings=marks_sorted_by_subject_info(
-            marks,
-            user.db_settings.get("goals", False)
-        ),
+        strings=strings,
         additional_buttons=AdditionalButtons(
             below_buttons={
                 "text": Texts.Buttons.UPDATE,

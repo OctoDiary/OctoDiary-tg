@@ -98,9 +98,12 @@ async def delete(callback: CallbackQuery):
 async def start_notify(callback: CallbackQuery, message, command: CommandObject):
     args = (command.args or "").split(" ")
     system = ""
+    delete_users = False
     for arg in args:
         if arg in ["-s", "--system"]:
             system = args[args.index(arg) + 1]
+        elif arg in ["-du", "--delete-users"]:
+            delete_users = True
 
     _message = await callback.message.edit_text(
         text=Texts.Admin.NOTIFY_SENDING
@@ -120,6 +123,9 @@ async def start_notify(callback: CallbackQuery, message, command: CommandObject)
         with contextlib.suppress(Exception):
             await notification_message.copy_to(user)
             successfully_sent += 1
+
+        if delete_users:
+            db.set(str(user), {})
 
     await _message.edit_text(
         text=Texts.Admin.NOTIFY_SUCCESS.format(

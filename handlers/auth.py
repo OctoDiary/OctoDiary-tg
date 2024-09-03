@@ -6,6 +6,7 @@
 import re
 from contextlib import suppress
 
+import jwt
 import requests
 from aiogram import Bot, F, Router
 from aiogram.enums import ChatType
@@ -114,7 +115,10 @@ async def check_token_and_send_confirm(message: Message, token: str, state: FSMC
         await message.delete()
     except APIError as e:
         await state.clear()
-        await message.answer(text=Texts.Authorization.ERROR_TRY_AGAIN(ERROR=str(e)))
+        await message.answer(
+            text=Texts.Authorization.ERROR_TRY_AGAIN(ERROR=str(e)),
+            reply_markup=ReplyKeyboardRemove()
+        )
 
 
 @auth_router.message(Command(commands=["auth", "login", "reauth"]))
@@ -210,6 +214,12 @@ async def set_login_type(message: Message, state: FSMContext):
 
 @auth_router.message(Authorization.token, AuthFilter())
 async def set_token(message: Message, state: FSMContext):
+    try:
+        token_data = jwt.decode(message.text, options={"verify_signature": False})
+    except:
+        await message.answer(Texts.Authorization.INVALID_TOKEN)
+        return
+
     response = await message.answer(Texts.LOADING, reply_markup=CANCEL)
 
     await check_token_and_send_confirm(response, token=message.text, state=state)

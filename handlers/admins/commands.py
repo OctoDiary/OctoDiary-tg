@@ -99,11 +99,16 @@ async def start_notify(callback: CallbackQuery, message, command: CommandObject)
     args = (command.args or "").split(" ")
     system = ""
     delete_users = False
+    users_ids = []
+
     for arg in args:
         if arg in ["-s", "--system"]:
             system = args[args.index(arg) + 1]
         elif arg in ["-du", "--delete-users"]:
             delete_users = True
+        elif arg in ["-u", "--users"]:
+            users_ids_raw = args[args.index(arg) + 1]
+            users_ids = [int(user_id) for user_id in users_ids_raw.split(",")]
 
     _message = await callback.message.edit_text(
         text=Texts.Admin.NOTIFY_SENDING
@@ -115,7 +120,7 @@ async def start_notify(callback: CallbackQuery, message, command: CommandObject)
         int(user_id)
         for user_id in db.keys()
         if user_id.isdigit() and db.user(user_id).system and int(user_id) not in db.blocked_users
-    ]:
+    ] if not users_ids else users_ids:
         if system and db.user(str(user)).system != system:
             continue
 

@@ -342,7 +342,7 @@
     "LOADING": "<i>⏳ Загрузка...</i>",
     "SETTINGS_APP_AUTH": "<b>Авторизация в <a href='https://t.me/OctoDiary/3'>приложении OctoDiary</a></b>\n\nАвторизуйтесь в приложении через QR-код или же напрямую по кнопке ниже\n\n• <b>Приложение OctoDiary</b> - <a href='https://t.me/OctoDiary/3'>Скачать</a>",
     "SETTINGS_APP_AUTH_DIRECTLY": "Авторизация напрямую",
-    "INTERNAL_ERROR": "<i>⚠️ Внутренняя ошибка</i>\n\nСообщите об этом в поддержку: /feedback",
+    "INTERNAL_ERROR": "<i>⚠️ Внутренняя ошибка</i>\nℹ\uFE0F Файл с логами ниже.\n\nСообщите об ошибке в поддержку (приложите данный файл для более быстрого выявления и решения проблемы): /feedback",
     "UPDATED": "Обновлено!",
     "FEEDBACK": {
         "CHOOSE_PLATFORM": "\uD83D\uDD30 <b>Обратная связь</b>\n\nВыберите платформу",

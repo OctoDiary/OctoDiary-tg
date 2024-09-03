@@ -13,6 +13,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any, Union
 
 from aiogram import types
+from aiogram.types import BufferedInputFile
 from git import Repo
 from loguru import logger
 
@@ -144,8 +145,21 @@ def handler(*, fsm: bool = False):
                     )
                 )
             except (Exception, BaseException) as e:
-                logger.exception(e)
-                await update.bot.send_message(update.from_user.id, Texts.INTERNAL_ERROR)
+                dt = get_datetime()
+                system = Database().user(str(update.from_user.id)).system
+                logger.bind(
+                    user_id=update.from_user.id,
+                    username=update.from_user.username,
+                    system=system
+                ).exception(e)
+                error_message = await update.bot.send_message(update.from_user.id, Texts.INTERNAL_ERROR)
+                await update.bot.send_chat_action(update.from_user.id, "upload_document")
+                await update.bot.send_document(update.from_user.id, BufferedInputFile.from_file(
+                    "user_error.log",
+                    filename=f"user_error_{system}_{dt.strftime('%Y-%m-%d_%H-%M')}.log"
+                ), reply_to_message_id=error_message.message_id)
+                with open("user_error.log", encoding="utf-8", mode="w") as f:
+                    f.write("")
         return wrapper
     return decorator
 

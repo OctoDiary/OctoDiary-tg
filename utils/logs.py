@@ -45,3 +45,11 @@ def init_loguru():
         diagnose=True,
         filter=(lambda record: record["level"].name in ["INFO", "WARNING"]),
     )
+    logger.add(
+        "user_error.log",
+        level="ERROR",
+        backtrace=True,
+        diagnose=True,
+        filter=(lambda record: record["level"].name == "ERROR" and "user_id" in record["extra"]),
+        format="{time:MMMM D, YYYY >> HH:mm:ss} | {level} | {module}:{function}:{line} | {extra[user_id]} {extra[username]} {extra[system]} | {message}",
+    )

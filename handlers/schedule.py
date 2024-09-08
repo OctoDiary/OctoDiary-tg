@@ -240,10 +240,10 @@ def lesson_info(lesson: LessonScheduleItem) -> str:
                         theme=theme.title
                     )
                     for theme in lesson.details.theme.theme_frames
-                    if theme.title
+                    if theme.title and lesson.details.theme and lesson.details.theme.theme_frames
                 ])
             )
-        ) if lesson.details and lesson.details.theme.theme_frames else ""
+        ) if lesson.details and lesson.details.theme and lesson.details.theme.theme_frames else ""
     ) + (
         (
             Texts.LESSON_INFO_DETAILS.MARKS + (

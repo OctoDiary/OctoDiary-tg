@@ -34,18 +34,6 @@ async def open(message: Message):
     await message.answer(text=Texts.Admin.OPENED_FOR_ALL_USERS)
 
 
-@AdminRouter.message(Command("statistics"), AdminFilter)
-async def statistics(message: Message):
-    await message.answer(text=Texts.Admin.STATISTICS(
-        ALL_USERS_COUNT=len([
-            user_id
-            for user_id in db.keys()
-            if user_id.isdigit() and db.user(user_id).system
-        ]),
-        NEW_USERS_IN_THIS_MONTH=db.settings.get(f"new-users-month:{date.today().month}", 0),
-    ))
-
-
 @AdminRouter.my_chat_member(ChatMemberUpdatedFilter(member_status_changed=KICKED))
 async def user_blocked_bot(message: Message):
     if message.chat.id != message.from_user.id:

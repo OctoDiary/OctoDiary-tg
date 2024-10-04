@@ -65,11 +65,13 @@ def markup(user: User, apis: APIs, section: Optional[str] = None):
             ]
         ] + (
             [
-                {
-                    "text": Texts.Buttons.CHOOSE_CHILD_PROFILE,
-                    "callback": choose_child_profile_menu,
-                    "kwargs": {"apis": apis, "user": user}
-                }
+                [
+                    {
+                        "text": Texts.Buttons.CHOOSE_CHILD_PROFILE,
+                        "callback": choose_child_profile_menu,
+                        "kwargs": {"apis": apis, "user": user}
+                    }
+                ]
             ] if user.db_profile["profile"]["type"] == "parent" else []
         ) if not section else (
             [
@@ -81,7 +83,6 @@ def markup(user: User, apis: APIs, section: Optional[str] = None):
                         "kwargs": {"apis": apis, "user": user, "attr": "create_mark"}
                     }
                 ]
-
             ] + (
                 [
                     [

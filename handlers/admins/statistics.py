@@ -99,7 +99,7 @@ async def statistics(message: Message):
     m = await message.answer("Генерация графиков...")
 
     app_stats = requests.get(
-        f"{'https://dsop.online' if not os.environ.get('TEST') else 'http://localhost:1811'}/octodiary/stats",
+        f"{'https://den4iksop.org' if not os.environ.get('TEST') else 'http://localhost:1811'}/octodiary/stats",
         headers={
             "verify-token": os.environ.get("STATES_TOKEN")
         }

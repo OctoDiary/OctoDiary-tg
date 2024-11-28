@@ -78,7 +78,7 @@ async def send_token(message: Message, user: User, code: str):
         DEFAULT if user.system == Texts.Systems.MY_SCHOOL else DEFAULT_MES
     )
     result = requests.post(
-        f"https://octodiary.dsop.online/accept_web_auth/{code}",
+        f"https://octodiary.den4iksop.org/accept_web_auth/{code}",
         json={
             "token": user.token,
             "system": user.system

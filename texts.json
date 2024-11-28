@@ -380,7 +380,7 @@
         "CANCEL": "\uD83D\uDD22 <b>Вход отменен</b>",
         "OK": "\uD83D\uDD22 <b>Вход выполнен!</b>",
         "ERROR": "\uD83D\uDEAB <b>Вход провален</b>\n\nПопробуйте ещё раз - /webauth",
-        "SEND_CODE": "\uD83D\uDD22 Введите <b>код</b> с <a href=\"https://octodiary.dsop.online/web_auth/\"><b>сайта</b></a>",
+        "SEND_CODE": "\uD83D\uDD22 Введите <b>код</b> с <a href=\"https://octodiary.den4iksop.org/web_auth/\"><b>сайта</b></a>",
         "CONFIRM": "\uD83D\uDD10 <b>Вы подтверждаете вход</b> на данном устройстве <b>с кодом {CODE}</b>?",
         "SUCCESS": "✅ <b>Вход выполнен!</b>"
     },

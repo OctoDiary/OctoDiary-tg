@@ -225,7 +225,7 @@ async def send_app_auth(update: CallbackQuery, user: User):
             [
                 {
                     "text": Texts.SETTINGS_APP_AUTH_DIRECTLY,
-                    "url": f"https://octodiary.dsop.online/redir?token=%s&system={0 if user.system == Texts.Systems.MES else 1}" % user.token
+                    "url": f"https://octodiary.den4iksop.org/redir?token=%s&system={0 if user.system == Texts.Systems.MES else 1}" % user.token
                 }
             ]
         ])

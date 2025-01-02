@@ -21,6 +21,7 @@ loguru = "^0.7.2"
 requests = "^2.31.0"
 plotly = "^5.24.1"
 kaleido = "0.2.1"
+redis = "^5.2.1"
 
 
 [build-system]

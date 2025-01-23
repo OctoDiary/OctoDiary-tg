@@ -4,6 +4,7 @@
 #           https://github.com/OctoDiary
 
 import os
+import pickle
 from typing import Any
 
 from lightdb import LightDB
@@ -180,10 +181,10 @@ class Database(LightDB):
         self.settings.set("blocked-users", value)
 
     async def new_feedback(self, data: dict):
-        await self.redis.set(f"feedback:{data['number']}", data)
+        await self.redis.set(f"feedback:{data['number']}", pickle.dumps(data))
 
     async def get_feedback(self, number: int):
-        return await self.redis.get(f"feedback:{number}")
+        return pickle.loads(await self.redis.get(f"feedback:{number}"))
 
     async def delete_feedback(self, number: int):
         data = await self.get_feedback(number)

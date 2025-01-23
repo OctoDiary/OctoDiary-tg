@@ -580,8 +580,8 @@
             "Другое": 9324
         },
         "TAGS": {
-            "MES": "#МЭШ",
-            "MY_SCHOOL": "#МОЯ_ШКОЛА",
+            "mes": "#МЭШ",
+            "myschool": "#МОЯ_ШКОЛА",
             "app": "#app",
             "tgbot": "#bot",
             "user-id": "#user{USER_ID}"

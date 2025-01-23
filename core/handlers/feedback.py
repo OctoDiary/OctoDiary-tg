@@ -51,7 +51,7 @@ async def platform(call: types.CallbackQuery, state: FSMContext):
     await state.set_state(Feedback.system)
 
 
-@router.callback_query(Feedback.system, F.data.in_(Texts.Systems.keys()))
+@router.callback_query(Feedback.system, F.data.in_(Texts.Systems.values()))
 async def system(call: types.CallbackQuery, state: FSMContext):
     await state.update_data(system=call.data)
 

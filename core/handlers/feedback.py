@@ -265,7 +265,7 @@ async def fclose(call: types.CallbackQuery, match: re.Match):
         await call.answer(text=Texts.Feedback.ALREADY_CLOSED)
         return
 
-    database.delete_feedback(number=data["number"])
+    await database.delete_feedback(number=data["number"])
 
     await call.message.edit_reply_markup(
         reply_markup=FEEDBACK_ADMIN_ACTIONS(data["number"], closed=True)

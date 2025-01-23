@@ -426,6 +426,9 @@ async def diary_week(call: types.CallbackQuery, bot: Bot, match: re.Match, upd: 
                     for date in (week[:-1] if week[-1].isoformat() + '"' not in str(response) else week)
                 }
             else:
+                await call.answer("Временно недоступно :(", show_alert=True)
+                return
+
                 strings = {
                     date.strftime("%d.%m"): Texts.Diary.BASE(
                         random.choice(Texts.Diary.EMOJIS)

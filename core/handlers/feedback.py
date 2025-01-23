@@ -197,7 +197,7 @@ async def save_media(message: types.Message):
         )
 
 
-@router.message(F.media_group_id, F.chat.id == os.getenv("ADMIN_CHAT_ID"))
+@router.message(F.media_group_id, F.chat.id == int(os.getenv("ADMINS_CHAT_ID")))
 async def media_group(message: types.Message):
     database.redis._queue.append(save_media(message)) # noqa
 

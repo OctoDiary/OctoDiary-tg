@@ -167,6 +167,9 @@ async def auth(message: Message, state: FSMContext, command: CommandObject):
 
 @router.message(Command("logout"), F.chat.type == ChatType.PRIVATE)
 async def logout_command(message: Message):
+    if not database.user(str(message.from_user.id)).token:
+        return
+
     await message.bot.inline.answer(
         update=message,
         response=Texts.LOGOUT_CONFIRM,

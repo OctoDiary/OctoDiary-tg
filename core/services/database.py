@@ -179,15 +179,15 @@ class Database(LightDB):
     def blocked_users(self, value: list[int]) -> None:
         self.settings.set("blocked-users", value)
 
-    def new_feedback(self, data: dict):
-        self.redis.set(f"feedback:{data['number']}", data)
+    async def new_feedback(self, data: dict):
+        await self.redis.set(f"feedback:{data['number']}", data)
 
-    def get_feedback(self, number: int):
-        return self.redis.get(f"feedback:{number}")
+    async def get_feedback(self, number: int):
+        return await self.redis.get(f"feedback:{number}")
 
-    def delete_feedback(self, number: int):
-        data = self.get_feedback(number)
-        self.redis.delete(f"feedback:{number}")
+    async def delete_feedback(self, number: int):
+        data = await self.get_feedback(number)
+        await self.redis.delete(f"feedback:{number}")
         return data
 
 

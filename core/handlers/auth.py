@@ -14,7 +14,7 @@ from aiogram.enums import ChatType
 from aiogram.filters import Command, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo, \
-    BufferedInputFile, InputMediaPhoto, ReactionTypeEmoji
+    BufferedInputFile, InputMediaPhoto, ReactionTypeEmoji, ReplyKeyboardRemove
 from octodiary.apis import AsyncMobileAPI
 from octodiary.exceptions import APIError
 from octodiary.types.captcha import Captcha
@@ -163,6 +163,37 @@ async def auth(message: Message, state: FSMContext, command: CommandObject):
         reply_markup=SYSTEMS,
         resize_keyboard=True
     )
+
+
+@router.message(Command("logout"), F.chat.type == ChatType.PRIVATE)
+async def logout_command(message: Message):
+    await message.bot.inline.answer(
+        update=message,
+        response=Texts.LOGOUT_CONFIRM,
+        reply_markup=[
+            {
+                "text": "✅",
+                "callback_data": "logout:yes",
+            },
+            {
+                "text": "❌",
+                "callback_data": "logout:nonono"
+            }
+        ]
+    )
+
+
+@router.callback_query(F.data == "logout:yes")
+async def logout(call: CallbackQuery):
+    await call.answer(Texts.EXITING)
+    await call.message.delete()
+    await call.message.answer(Texts.YOU_ARE_LOGGED_OUT, reply_markup=ReplyKeyboardRemove())
+    database.pop(str(call.from_user.id))
+
+
+@router.callback_query(F.data == "logout:nonono")
+async def cancel(call: CallbackQuery):
+    await call.message.delete()
 
 
 @router.callback_query(Authorization.system, F.data.in_(Texts.SystemsNames.keys()))

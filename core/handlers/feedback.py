@@ -219,7 +219,7 @@ async def fanswer(message: types.Message, command: CommandObject, bot: Bot):
                 await message.react([types.ReactionTypeEmoji(emoji="🤨")])
                 return
 
-            data = pickle.loads(await database.redis.get(str(message.reply_to_message.media_group_id)))
+            data_media_group = pickle.loads(await database.redis.get(str(message.reply_to_message.media_group_id)))
             await bot.send_media_group(
                 chat_id=data["user"],
                 media=[
@@ -229,7 +229,7 @@ async def fanswer(message: types.Message, command: CommandObject, bot: Bot):
                         "document": types.InputMediaDocument,
                         "audio": types.InputMediaAudio
                     }[media_type](media=file_id)
-                    for media_type, file_id in data
+                    for media_type, file_id in data_media_group
                 ]
             )
         elif message.reply_to_message.content_type in ("photo", "video", "document", "audio"):

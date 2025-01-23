@@ -122,7 +122,7 @@ async def confirm(call: types.CallbackQuery, state: FSMContext, bot: Bot):
         text=Texts.Feedback.SENDING,
         reply_markup=types.ReplyKeyboardRemove()
     )
-    database.new_feedback(
+    await database.new_feedback(
         data={
             "number": number,
             "platform": platform,
@@ -202,7 +202,7 @@ async def media_group(message: types.Message):
     database.redis._queue.append(save_media(message)) # noqa
 
 
-@router.message(Command("fanswer"), F.from_user.id.in_(database.admins), F.chat.id == os.getenv("ADMIN_CHAT_ID"))
+@router.message(Command("fanswer"), F.from_user.id.in_(database.admins))
 async def fanswer(message: types.Message, command: CommandObject, bot: Bot):
     if not command.args or not message.reply_to_message or not (match := re.match(r"#OD(.*)", command.args)):
         await message.react([types.ReactionTypeEmoji(emoji="🤨")])

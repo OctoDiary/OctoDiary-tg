@@ -1,4 +1,4 @@
-#               © Copyright 2023
+#               © Copyright 2025
 #          Licensed under the MIT License
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
@@ -12,9 +12,9 @@ from urllib.parse import urlparse
 
 from aiogram import Bot, Dispatcher, Router, types
 
-from inline.types import AdditionalButtons, ButtonCallback, ReplyMarkup
-from loop import loop
-from utils.texts import Texts
+from core.misc.loop import loop
+from core.misc.texts import Texts
+from core.misc.inline.types import AdditionalButtons, ButtonCallback, ReplyMarkup
 
 logger = logging.getLogger("BotInlineManager")
 
@@ -62,8 +62,8 @@ class BotInlineManager:
                 show_alert=True
             )
 
+    @staticmethod
     async def __answer_callback(
-            self,
             call: types.CallbackQuery,
             text: str,
             *,
@@ -74,8 +74,8 @@ class BotInlineManager:
             text=text, show_alert=show_alert, **kwargs
         )
 
+    @staticmethod
     async def validate_inline_markup(
-            self,
             buttons: Optional[
                 Union[
                     types.InlineKeyboardMarkup,
@@ -107,7 +107,8 @@ class BotInlineManager:
                 )
         ) else None
 
-    def normalize_markup(self, markup: ReplyMarkup) -> ReplyMarkup:
+    @staticmethod
+    def normalize_markup(markup: ReplyMarkup) -> ReplyMarkup:
         return (
             [[markup]]
             if isinstance(markup, (dict, ButtonCallback))
@@ -168,27 +169,27 @@ class BotInlineManager:
                 try:
                     if "url" in button:
                         try:
-                            _ = bool(urlparse(button["url"]).netloc)
+                            _ = bool(urlparse(button["url"]).netloc) # noqa
                         except Exception:
-                            return False
+                            return False # noqa
 
                         line.append(
                             types.InlineKeyboardButton(
-                                text=button["text"],
-                                url=button["url"]
+                                text=button["text"], # noqa
+                                url=button["url"] # noqa
                             )
                         )
                     elif "callback" in button:
                         line.append(
                             types.InlineKeyboardButton(
-                                text=button["text"],
-                                callback_data=button["callback_data"],
+                                text=button["text"], # noqa
+                                callback_data=button["callback_data"], # noqa
                             )
                         )
-                        self.inline_buttons_map[button["callback_data"]] = ButtonCallback.init(
-                            data=button["callback_data"],
-                            text=button["text"],
-                            callback=button["callback"],
+                        self.inline_buttons_map[button["callback_data"]] = ButtonCallback.init( # noqa
+                            data=button["callback_data"], # noqa
+                            text=button["text"], # noqa
+                            callback=button["callback"], # noqa
                             disable_deadline=disable_deadline or button.get("disable_deadline", False),
                             reusable=button.get("reusable", False),
                             delete_time=button.get("delete_time", None),
@@ -198,53 +199,62 @@ class BotInlineManager:
                     elif "user_id" in button:
                         line.append(
                             types.InlineKeyboardButton(
-                                text=button["text"],
-                                url=f"tg://user?id={button['user_id']}"
+                                text=button["text"], # noqa
+                                url=f"tg://user?id={button['user_id']}" # noqa
                             )
                         )
                     elif "switch_inline_query_current_chat" in button:
                         line.append(
                             types.InlineKeyboardButton(
-                                text=button["text"],
-                                switch_inline_query_current_chat=button["switch_inline_query_current_chat"]
+                                text=button["text"], # noqa
+                                switch_inline_query_current_chat=button["switch_inline_query_current_chat"] # noqa
                             )
                         )
                     elif "switch_inline_query" in button:
                         line.append(
                             types.InlineKeyboardButton(
-                                text=button["text"],
-                                switch_inline_query=button["switch_inline_query"]
+                                text=button["text"], # noqa
+                                switch_inline_query=button["switch_inline_query"] # noqa
                             )
                         )
                     elif "switch_inline_query_chosen_chat" in button:
                         line.append(
                             types.InlineKeyboardButton(
-                                text=button["text"],
+                                text=button["text"], # noqa
                                 switch_inline_query_chosen_chat=(
-                                    button["switch_inline_query_chosen_chat"]
+                                    button["switch_inline_query_chosen_chat"] # noqa
                                     if isinstance(
-                                        button["switch_inline_query_chosen_chat"],
+                                        button["switch_inline_query_chosen_chat"], # noqa
                                         types.SwitchInlineQueryChosenChat
                                     )
                                     else types.SwitchInlineQueryChosenChat(
-                                        query=button["switch_inline_query_chosen_chat"].get("query"),
-                                        allow_user_chats=button["switch_inline_query_chosen_chat"].get(
+                                        query=button["switch_inline_query_chosen_chat"].get("query"), # noqa
+                                        allow_user_chats=button["switch_inline_query_chosen_chat"].get( # noqa
                                             "allow_user_chats"),
-                                        allow_bot_chats=button["switch_inline_query_chosen_chat"].get(
+                                        allow_bot_chats=button["switch_inline_query_chosen_chat"].get( # noqa
                                             "allow_bot_chats"),
-                                        allow_group_chats=button["switch_inline_query_chosen_chat"].get(
+                                        allow_group_chats=button["switch_inline_query_chosen_chat"].get( # noqa
                                             "allow_group_chats"),
-                                        allow_channel_chats=button["switch_inline_query_chosen_chat"].get(
+                                        allow_channel_chats=button["switch_inline_query_chosen_chat"].get( # noqa
                                             "allow_channel_chats")
-                                    ) if isinstance(button["switch_inline_query_chosen_chat"], dict) else None
+                                    ) if isinstance(button["switch_inline_query_chosen_chat"], dict) else None # noqa
+                                )
+                            )
+                        )
+                    elif "web_app" in button:
+                        line.append(
+                            types.InlineKeyboardButton(
+                                text=button["text"], # noqa
+                                web_app=types.WebAppInfo(
+                                    url=button["web_app"] # noqa
                                 )
                             )
                         )
                     else:
                         line.append(
                             types.InlineKeyboardButton(
-                                text=button["text"],
-                                callback_data=button["callback_data"]
+                                text=button["text"], # noqa
+                                callback_data=button["callback_data"] # noqa
                             )
                         )
                 except KeyError:
@@ -318,7 +328,8 @@ class BotInlineManager:
     def _list_markup(self, *args, **kwargs):
         return lambda: self._inline_list_markup(*args, **kwargs)
 
-    def chunks(self, lst, n):
+    @staticmethod
+    def chunks(lst, n):
         return [lst[i: i + n] for i in range(0, len(lst), n)]
 
     def _inline_list_markup(
@@ -334,6 +345,7 @@ class BotInlineManager:
         if isinstance(strings, dict):
             return self.generate_markup(
                 self.normalize_markup(additional_buttons.up_buttons)
+                + self.normalize_markup(additional_buttons.up_buttons_f.get(current_page, []))
                 + self.chunks([
                     {
                         "text": (
@@ -354,12 +366,14 @@ class BotInlineManager:
                     }
                     for num, btn in enumerate(list(strings.keys()))
                 ], row_width)
+                + self.normalize_markup(additional_buttons.below_buttons_f.get(current_page, []))
                 + self.normalize_markup(additional_buttons.below_buttons)
             )
         else:
             current = (current_page if isinstance(current_page, int) else strings.index(current_page) + 1)
             return self.generate_markup(
                 self.normalize_markup(additional_buttons.up_buttons)
+                + self.normalize_markup(additional_buttons.up_buttons_f.get(current_page, []))
                 + (
                     [
                         {
@@ -465,6 +479,7 @@ class BotInlineManager:
                         }
                     ]
                 )
+                + self.normalize_markup(additional_buttons.below_buttons_f.get(current_page, []))
                 + self.normalize_markup(additional_buttons.below_buttons)
             )
 

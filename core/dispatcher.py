@@ -1,0 +1,8 @@
+#               © Copyright 2025
+#          Licensed under the MIT License
+#        https://opensource.org/licenses/MIT
+#           https://github.com/OctoDiary
+
+from aiogram import Dispatcher
+
+dispatcher = Dispatcher(name="OctoDiary")

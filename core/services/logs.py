@@ -1,4 +1,4 @@
-#               © Copyright 2023
+#               © Copyright 2025
 #          Licensed under the MIT License
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
@@ -16,7 +16,7 @@ class InterceptHandler(logging.Handler):
         except ValueError:
             level = record.levelno
 
-        frame, depth = sys._getframe(6), 6
+        frame, depth = sys._getframe(6), 6 # noqa
         while frame and frame.f_code.co_filename == logging.__file__:
             frame = frame.f_back
             depth += 1
@@ -26,6 +26,17 @@ class InterceptHandler(logging.Handler):
 
 def init_loguru():
     logging.basicConfig(handlers=[InterceptHandler()], level=20, force=True)
+    logger.level("MINIDEBUG", no=15, color="<blue>")
+    logger.add(
+        "logs/minidebug.log",
+        level="MINIDEBUG",
+        format="{time:MMMM D, YYYY >> HH:mm:ss} | {level} | {module}:{function}:{line} | {message}",
+        rotation="3 MB",
+        compression="zip",
+        backtrace=True,
+        diagnose=True,
+        filter=(lambda record: record["level"].name == "MINIDEBUG"),
+    )
     logger.add(
         "logs/error.log",
         level="ERROR",
@@ -46,10 +57,10 @@ def init_loguru():
         filter=(lambda record: record["level"].name in ["INFO", "WARNING"]),
     )
     logger.add(
-        "user_error.log",
+        "logs/user_errors.log",
         level="ERROR",
         backtrace=True,
         diagnose=True,
-        filter=(lambda record: record["level"].name == "ERROR" and "user_id" in record["extra"]),
+        filter=(lambda record: record["level"].name == "ERROR" and "uid" in record["extra"]),
         format="{time:MMMM D, YYYY >> HH:mm:ss} | {level} | {module}:{function}:{line} | {extra[user_id]} {extra[username]} {extra[system]} | {message}",
     )

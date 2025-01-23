@@ -1,4 +1,4 @@
-#               © Copyright 2023
+#               © Copyright 2025
 #          Licensed under the MIT License
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
@@ -75,4 +75,6 @@ class ButtonCallback(BaseModel):
 
 class AdditionalButtons(BaseModel):
     up_buttons: ReplyMarkup = Field([])
+    up_buttons_f: dict[str, ReplyMarkup] = Field({})
     below_buttons: ReplyMarkup = Field([])
+    below_buttons_f: dict[str, ReplyMarkup] = Field({})

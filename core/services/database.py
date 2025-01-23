@@ -1,11 +1,15 @@
-#               © Copyright 2023
+#               © Copyright 2025
 #          Licensed under the MIT License
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
 
+import os
 from typing import Any
 
 from lightdb import LightDB
+from redis.asyncio import Redis
+
+from core.misc.apis import APIs
 
 
 class User:
@@ -14,6 +18,14 @@ class User:
     def __init__(self, db: "Database", user_id: str):
         self.__db = db
         self.__id = user_id
+
+    @property
+    def apis(self) -> APIs:
+        return APIs(self.token, self.system.lower().replace("_", ""))
+
+    @property
+    def id(self):
+        return self.__id
 
     def get(self, key: str, default: Any = None) -> Any:
         return self.__db.get_key(self.__id, key, default=default)
@@ -114,9 +126,11 @@ class Database(LightDB):
         return cls.__instance__
 
     def __init__(self) -> None:
-        super().__init__(location="users_db.json")
-        self.settings = LightDB("settings.json")
-        self.cache = LightDB("cache.json")
+        super().__init__(location="files/users_db.json")
+        self.settings = LightDB("files/settings.json")
+        self.cache = LightDB("files/cache.json")
+        self.redis = Redis.from_url(os.environ.get("REDIS_URL", "redis://127.0.0.1:6379/") + "20")
+        self.redis._queue = []
 
     def __getattribute__(self, __name: str) -> Any:
         return (
@@ -124,6 +138,8 @@ class Database(LightDB):
             if __name.startswith("db_")
             else self.settings.get(__name[9:])
             if __name.startswith("settings_")
+            else self.redis.get(__name[5:])
+            if __name.startswith("redis_")
             else super().__getattribute__(__name)
         )
 
@@ -141,15 +157,15 @@ class Database(LightDB):
 
     @property
     def closed(self) -> bool:
-        return self.settings.get("closed", False)
+        return self.settings.get("closed", False) # noqa
 
     @closed.setter
     def closed(self, value: bool) -> None:
         self.settings.set("closed", value)
 
     @property
-    def admins(self) -> list[str]:
-        return self.settings.get("admins", [5184725450, 692755648])
+    def admins(self) -> list[int]:
+        return list(map(int, os.environ.get("ADMINS", "").split(",")))
 
     @admins.setter
     def admins(self, value: list[str]) -> None:
@@ -157,4 +173,22 @@ class Database(LightDB):
 
     @property
     def blocked_users(self) -> list[int]:
-        return self.settings.get("blocked-users", [])
+        return self.settings.get("blocked-users", []) # noqa
+
+    @blocked_users.setter
+    def blocked_users(self, value: list[int]) -> None:
+        self.settings.set("blocked-users", value)
+
+    def new_feedback(self, data: dict):
+        self.redis.set(f"feedback:{data['number']}", data)
+
+    def get_feedback(self, number: int):
+        return self.redis.get(f"feedback:{number}")
+
+    def delete_feedback(self, number: int):
+        data = self.get_feedback(number)
+        self.redis.delete(f"feedback:{number}")
+        return data
+
+
+database = db = Database()

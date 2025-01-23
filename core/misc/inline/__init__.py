@@ -1,10 +1,10 @@
-#               © Copyright 2023
+#               © Copyright 2025
 #          Licensed under the MIT License
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
 
-from inline.manager import BotInlineManager, ReplyMarkup
-from inline.types import ButtonCallback
+from core.misc.inline.manager import BotInlineManager, ReplyMarkup
+from core.misc.inline.types import ButtonCallback
 
 __all__ = [
     "BotInlineManager",

@@ -248,7 +248,6 @@ async def diary_week(call: types.CallbackQuery, bot: Bot, match: re.Match, upd: 
                     ...
                     return
 
-                print(r)
                 response = Marks.model_validate(r)
                 cache = True
 
@@ -319,7 +318,7 @@ async def diary_week(call: types.CallbackQuery, bot: Bot, match: re.Match, upd: 
                 if not (r := cached.get(week[0].isoformat(), None)):
                     ...
                     return
-                print(r)
+
                 response: EventsResponse = EventsResponse.model_validate(r)
                 cache = True
 
@@ -496,7 +495,7 @@ async def diary_week(call: types.CallbackQuery, bot: Bot, match: re.Match, upd: 
                 if not (r := cached.get(week[0].isoformat(), None)):
                     ...
                     return
-                print(r)
+
                 response: Homeworks = Homeworks.model_validate(r)
                 cache = True
 

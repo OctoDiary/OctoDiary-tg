@@ -115,7 +115,7 @@ async def confirm(call: types.CallbackQuery, state: FSMContext, bot: Bot):
     messages: list[types.Message] = data["messages"]
 
     number = random.randint(1000, 99999999)
-    while database.get_feedback(number=number) is not None:
+    while (await database.get_feedback(number=number)) is not None:
         number = random.randint(1000, 99999999)
 
     msg = await call.message.answer(
@@ -208,7 +208,7 @@ async def fanswer(message: types.Message, command: CommandObject, bot: Bot):
         await message.react([types.ReactionTypeEmoji(emoji="🤨")])
         return
 
-    data = database.get_feedback(number=int(match.group(1)))
+    data = await database.get_feedback(number=int(match.group(1)))
     if not data:
         await message.react([types.ReactionTypeEmoji(emoji="🤨")])
         return
@@ -260,12 +260,12 @@ async def fanswer_fake(message: types.Message):
 
 @router.callback_query(F.data.regexp(r"f:close:(\d+)").as_("match"), F.from_user.id.in_(database.admins))
 async def fclose(call: types.CallbackQuery, match: re.Match):
-    data = database.get_feedback(number=int(match.group(1)))
+    data = await database.get_feedback(number=int(match.group(1)))
     if not data:
         await call.answer(text=Texts.Feedback.ALREADY_CLOSED)
         return
 
-    database.clear(number=data["number"])
+    database.delete_feedback(number=data["number"])
 
     await call.message.edit_reply_markup(
         reply_markup=FEEDBACK_ADMIN_ACTIONS(data["number"], close=True)

@@ -184,7 +184,8 @@ class Database(LightDB):
         await self.redis.set(f"feedback:{data['number']}", pickle.dumps(data))
 
     async def get_feedback(self, number: int):
-        return pickle.loads(await self.redis.get(f"feedback:{number}"))
+        raw = await self.redis.get(f"feedback:{number}")
+        return pickle.loads(raw) if raw else None
 
     async def delete_feedback(self, number: int):
         data = await self.get_feedback(number)

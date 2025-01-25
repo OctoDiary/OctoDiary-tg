@@ -40,7 +40,7 @@ async def start(message: Message, state: FSMContext, command: CommandObject, bot
         elif match := re.match(r"web_auth_(.*)", command.args):
             await web_auth_result(message, state, match, bot)
         elif command.args == "calc":
-            await calculator_cmd(message)
+            await calculator_cmd(message, bot)
         return
 
     user = database.user(message.from_user.id)

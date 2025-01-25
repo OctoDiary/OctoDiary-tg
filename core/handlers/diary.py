@@ -74,6 +74,11 @@ async def diary_callback(update: types.CallbackQuery, bot: Bot):
             marks_by_subject: SubjectsMarks = await user_data.get_cached(DataType.MARKS_BY_SUBJECT)
             cache = True
 
+        if marks_by_subject is None:
+            return await update.answer(
+                Texts.EMPTY(random.choice(["🫥", "😶‍🌫️", "😶", "🫠", "🫣"]))
+            )
+
         info = "\n".join(
             list(dict(sorted({
                 Texts.Diary.MarksBySubject.SUBJECT(

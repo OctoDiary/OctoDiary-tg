@@ -1,4 +1,4 @@
-#               © Copyright 2023
+#               © Copyright 2025
 #          Licensed under the MIT License
 #        https://opensource.org/licenses/MIT
 #           https://github.com/OctoDiary
@@ -10,7 +10,7 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from apis import APIs
+from core.misc.apis import APIs
 from database import User
 from octodiary import types
 from octodiary.urls import BaseURL, URLTypes

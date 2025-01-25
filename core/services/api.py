@@ -222,11 +222,15 @@ class UserData:
                 )
 
     async def get_cached(self, name: DataType, key: str = None, raw: bool = False):
+        raw_data = await database.redis.get(key or f"user:{self.db_user.id}:{name}")
+        if not raw_data:
+            return None
+
         return UserData.MODELS[name].model_validate(
             pickle.loads(
-                await database.redis.get(key or f"user:{self.db_user.id}:{name}")
+                raw_data
             )
-        ) if not raw else pickle.loads(await database.redis.get(key or f"user:{self.db_user.id}:{name}"))
+        ) if not raw else pickle.loads(raw_data)
 
     async def load(self, name: DataType, on_loaded=None, on_error=None, **kwargs):
         try:

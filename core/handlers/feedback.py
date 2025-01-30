@@ -273,4 +273,4 @@ async def fclose(call: types.CallbackQuery, match: re.Match):
     await call.message.edit_reply_markup(
         reply_markup=FEEDBACK_ADMIN_ACTIONS(data["number"], closed=True)
     )
-    await call.answer(text=Texts.Feedback.CLOSED)
+    await call.answer(text=Texts.Feedback.CLOSED(NUMBER=data["number"]))

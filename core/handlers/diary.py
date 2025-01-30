@@ -63,6 +63,9 @@ async def diary_cmd(update: types.Message | types.CallbackQuery | types.ChosenIn
 async def diary_callback(update: types.CallbackQuery, bot: Bot):
     inline = update.inline_message_id
     user = database.user(update.from_user.id)
+    if not user.token:
+        return await update.answer()
+
     today = get_date()
     is_update = update.data.endswith(":upd")
     user_data = UserData(user, user.apis)
@@ -689,6 +692,9 @@ class CalculatorWeightedAverageMarks:
 async def calculator_cmd(update: types.Message | types.ChosenInlineResult | types.CallbackQuery, bot: Bot):
     user = database.user(update.from_user.id)
     if not user.token:
+        return await update.answer()
+
+    if not user.token:
         _id = uuid.uuid4().hex
         calc = CalculatorWeightedAverageMarks([])
         CalculatorWeightedAverageMarks.calcs[_id] = (calc, time.time() + 60*60*5)
@@ -856,6 +862,9 @@ async def get_mark_info(
 
     response = await bot.inline.answer(update, Texts.LOADING)
     user = database.user(update.from_user.id)
+    if not user.token:
+        return await update.answer()
+
     data = UserData(user, user.apis)
 
     try:
@@ -920,6 +929,9 @@ async def get_lesson_info(
 
     response = await bot.inline.answer(update, Texts.LOADING)
     user = database.user(update.from_user.id)
+    if not user.token:
+        return await update.answer()
+
     data = UserData(user, user.apis)
 
     try:

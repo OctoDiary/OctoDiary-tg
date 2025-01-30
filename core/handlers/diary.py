@@ -73,7 +73,8 @@ async def diary_callback(update: types.CallbackQuery, bot: Bot):
         database.pop(user.id)
         await send_message(
             bot,
-            Texts.TOKEN_EXPIRED
+            user.id,
+            Texts.TOKEN_IS_EXPIRED
         )
         return
 
@@ -251,7 +252,8 @@ async def diary_week(call: types.CallbackQuery, bot: Bot, match: re.Match, upd: 
         database.pop(user.id)
         await send_message(
             bot,
-            Texts.TOKEN_EXPIRED
+            user.id,
+            Texts.TOKEN_IS_EXPIRED
         )
         return
 

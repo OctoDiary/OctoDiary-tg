@@ -702,8 +702,6 @@ async def confirm(call: CallbackQuery, state: FSMContext, bot: Bot):
         }
     }
     user.db_skip_notifications = True
-
-    print("OOPS!")
     await UserData(user, user.apis).load_all(bot)
 
     await response.answer(

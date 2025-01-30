@@ -363,7 +363,7 @@ class UserData:
 
     async def check_token(self):
         token = self.db_user.token
-        if self.token_is_expired(token):
+        if await self.token_is_expired(token):
             raise RuntimeError("TokenExpired")
 
         data = jwt.decode(token, options={"verify_signature": False})

@@ -387,7 +387,6 @@ async def settings_callback(call: types.CallbackQuery, bot: Bot, match: re.Match
             await call.answer(Texts.TOKEN_REFRESHED, show_alert=True)
             return
         case X if (match2 := re.match(r"(.*)/(.*)=(.*)", X)):
-            print(match2)
             match match2.group(3):
                 case "not":
                     user.db_settings = user.db_settings | {

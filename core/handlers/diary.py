@@ -65,9 +65,19 @@ async def diary_callback(update: types.CallbackQuery, bot: Bot):
     user = database.user(update.from_user.id)
     today = get_date()
     is_update = update.data.endswith(":upd")
+    user_data = UserData(user, user.apis)
+
+    try:
+        await user_data.check_token()
+    except RuntimeError:
+        database.pop(user.id)
+        await send_message(
+            bot,
+            Texts.TOKEN_EXPIRED
+        )
+        return
 
     if update.data.startswith("diary:marks_by_subject"):
-        user_data = UserData(user, user.apis)
         try:
             marks_by_subject: SubjectsMarks = await user_data.get(DataType.MARKS_BY_SUBJECT)
         except: # noqa
@@ -235,6 +245,15 @@ async def diary_week_update(call: types.CallbackQuery, bot: Bot):
 async def diary_week(call: types.CallbackQuery, bot: Bot, match: re.Match, upd: bool = False):
     user = database.user(call.from_user.id)
     user_data = UserData(user, user.apis)
+    try:
+        await user_data.check_token()
+    except RuntimeError:
+        database.pop(user.id)
+        await send_message(
+            bot,
+            Texts.TOKEN_EXPIRED
+        )
+        return
 
     today = get_date()
     week = []
@@ -248,7 +267,7 @@ async def diary_week(call: types.CallbackQuery, bot: Bot, match: re.Match, upd: 
             try:
                 response: Marks = await user_data.get(DataType.MARKS_BY_DATE, from_date=week[0], to_date=week[-1])
             except: # noqa
-                cached: dict = await user_data.get_cached(DataType.MARKS_BY_DATE, raw=True)
+                cached: dict = await user_data.get_cached(DataType.MARKS_BY_DATE, raw=True) or {}
                 if not (r := cached.get(week[0].isoformat(), None)):
                     ...
                     return
@@ -319,7 +338,7 @@ async def diary_week(call: types.CallbackQuery, bot: Bot, match: re.Match, upd: 
             try:
                 response: EventsResponse = await user_data.get(DataType.EVENTS, begin_date=week[0], end_date=week[-1])
             except: # noqa
-                cached: dict = await user_data.get_cached(DataType.EVENTS, raw=True)
+                cached: dict = await user_data.get_cached(DataType.EVENTS, raw=True) or {}
                 if not (r := cached.get(week[0].isoformat(), None)):
                     ...
                     return
@@ -496,7 +515,7 @@ async def diary_week(call: types.CallbackQuery, bot: Bot, match: re.Match, upd: 
             try:
                 response: Homeworks = await user_data.get(DataType.HOMEWORKS, from_date=week[0], to_date=week[-1])
             except: # noqa
-                cached: dict = await user_data.get_cached(DataType.HOMEWORKS, raw=True)
+                cached: dict = await user_data.get_cached(DataType.HOMEWORKS, raw=True) or {}
                 if not (r := cached.get(week[0].isoformat(), None)):
                     ...
                     return

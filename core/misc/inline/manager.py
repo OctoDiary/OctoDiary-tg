@@ -586,7 +586,8 @@ class BotInlineManager:
                     reply_markup=new_reply_markup, **kwargs
                 )
         elif isinstance(update, (types.Chat, types.User)):
-            return await self.bot.send_message(
+            return await send_message(
+                self.bot,
                 text=response,
                 chat_id=update.id,
                 reply_markup=new_reply_markup, **kwargs

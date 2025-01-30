@@ -249,7 +249,16 @@ class UserData:
                 raise e
 
     async def load_all(self, bot: Bot):
-        await self.check_token()
+        try:
+            await self.check_token()
+        except RuntimeError as e:
+            if e.args[0] == "ExpiredToken":
+                database.pop(self.db_user.id)
+                await send_message(bot, self.db_user.id, Texts.TOKEN_IS_EXPIRED)
+                return False
+
+            raise e
+
         try:
             self.profile_id = await self.load(DataType.PROFILE_ID)
             self.db_user.db_profile_id = self.profile_id

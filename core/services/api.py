@@ -19,7 +19,8 @@ from pydantic import BaseModel
 
 from core.misc.additional_models import MarkInfo, Homeworks
 from core.misc.apis import APIs
-from core.misc.utils import get_date, TIMEZONE, get_week_for_date, get_datetime
+from core.misc.texts import Texts
+from core.misc.utils import get_date, TIMEZONE, get_week_for_date, get_datetime, send_message
 from core.services.database import User, database
 from core.services.octodiary_x import refresh_token
 

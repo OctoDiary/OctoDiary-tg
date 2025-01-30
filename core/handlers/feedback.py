@@ -17,6 +17,7 @@ from core.keyboards.inline import FEEDBACK_PLATFORM, SYSTEMS, DONE, CONFIRM, FEE
 from core.keyboards.reply import FEEDBACK_REASONS
 from core.misc.states import Feedback
 from core.misc.texts import Texts
+from core.misc.utils import send_message
 from core.services.database import database
 
 router = Router(name="feedback")
@@ -140,7 +141,8 @@ async def confirm(call: types.CallbackQuery, state: FSMContext, bot: Bot):
         message_thread_id=data["message_thread_id"],
         disable_notification=True
     )
-    await bot.send_message(
+    await send_message(
+        bot,
         chat_id=os.getenv("ADMINS_CHAT_ID"),
         message_thread_id=data["message_thread_id"],
         reply_to_message_id=forwarded[0].message_id,
@@ -239,7 +241,8 @@ async def fanswer(message: types.Message, command: CommandObject, bot: Bot):
             ))
             return await message.react([types.ReactionTypeEmoji(emoji="👀")])
 
-        await bot.send_message(
+        await send_message(
+            bot,
             chat_id=data["user"],
             text=Texts.Feedback.ANSWER(
                 NUMBER=data["number"],

@@ -20,7 +20,7 @@ from core.keyboards.inline import DIARY, BACK_BUTTON, CALC_MARKS
 from core.misc.additional_models import MarkInfo, Homeworks, HomeworkItem
 from core.misc.texts import Texts
 from core.misc.utils import get_date, get_week_for_date, MONTH_NAME_NUMERALS, pluralization_string, start_with_args, \
-    fmark, chunks, WEEKDAY, escape_html, parse_time, parse_date_iso
+    fmark, chunks, WEEKDAY, escape_html, parse_time, parse_date_iso, send_message
 from core.services.api import UserData, DataType
 from core.services.database import database
 from core.misc.inline.types import AdditionalButtons
@@ -76,7 +76,7 @@ async def diary_callback(update: types.CallbackQuery, bot: Bot):
 
         if marks_by_subject is None:
             return await update.answer(
-                Texts.EMPTY(random.choice(["🫥", "😶‍🌫️", "😶", "🫠", "🫣"]))
+                Texts.EMPTY(random.choice(["🫥", "😶‍🌫️", "😶", "🫠", "🫣"])).without_html
             )
 
         info = "\n".join(

@@ -15,6 +15,7 @@ from aiogram import Bot, Dispatcher, Router, types
 from core.misc.loop import loop
 from core.misc.texts import Texts
 from core.misc.inline.types import AdditionalButtons, ButtonCallback, ReplyMarkup
+from core.misc.utils import send_message
 
 logger = logging.getLogger("BotInlineManager")
 
@@ -272,7 +273,8 @@ class BotInlineManager:
             reply_markup: Optional[Union[ReplyMarkup, types.InlineKeyboardMarkup]] = None,
             **kwargs
     ):
-        return await self.bot.send_message(
+        return await send_message(
+            self.bot,
             chat_id=chat_id,
             text=text,
             reply_markup=self.generate_markup(reply_markup),

@@ -12,7 +12,7 @@ from loguru import logger
 
 from core.dispatcher import dispatcher
 from core.misc.texts import Texts
-from core.misc.utils import escape_html
+from core.misc.utils import escape_html, send_message
 from core.services.database import database
 
 
@@ -45,7 +45,7 @@ async def error_handler(event: ErrorEvent, bot: Bot):
     with open("logs/user_errors.log", mode="w") as f:
         f.write("")
 
-    await bot.send_message(update.from_user.id, Texts.INTERNAL_ERROR(UUID=uid))
+    await send_message(bot, update.from_user.id, Texts.INTERNAL_ERROR(UUID=uid))
     await bot.send_document(
         os.environ.get("ADMINS_CHAT_ID"),
         BufferedInputFile(

@@ -13,6 +13,8 @@ import typing
 from datetime import datetime, timezone, timedelta, date
 from urllib.parse import quote_plus, unquote_plus
 
+import aiogram.exceptions
+from aiogram import Bot
 from git import Repo
 
 TIMEZONE = timezone(timedelta(hours=3), "MSK")
@@ -263,3 +265,11 @@ def sort_dict_by_date(dictionary: dict[str, typing.Any], reverse: bool = False, 
         "strings": sorted_dict,
         "current_page": current_page
     }
+
+
+async def send_message(bot: Bot, *args, **kwargs):
+    try:
+        await bot.send_message(*args, **kwargs)
+    except aiogram.exceptions.TelegramRetryAfter as e:
+        await asyncio.sleep(e.retry_after)
+        await bot.send_message(*args, **kwargs)

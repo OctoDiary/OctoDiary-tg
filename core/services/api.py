@@ -354,17 +354,26 @@ class UserData:
 
     async def check_token(self):
         token = self.db_user.token
+        if self.token_is_expired(token):
+            raise RuntimeError("TokenExpired")
+
         data = jwt.decode(token, options={"verify_signature": False})
         exp = datetime.datetime.fromtimestamp(
             data["exp"], tz=TIMEZONE
         )
-        now = datetime.datetime.now(tz=TIMEZONE)
-        if exp < now:
-            return False
+        now = get_datetime()
 
         if abs(exp - now).total_seconds() <= 60 * 60 * 24 * 3:
             try:
                 self.db_user.token = await UserData.refresh_token(token)
                 return True
             except: # noqa
-                return False
+                raise RuntimeError("TokenExpired")
+
+    @staticmethod
+    async def token_is_expired(token: str):
+        data = jwt.decode(token, options={"verify_signature": False})
+        exp = datetime.datetime.fromtimestamp(
+            data["exp"], tz=TIMEZONE
+        )
+        return get_datetime() > exp
